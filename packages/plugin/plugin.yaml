@@ -1,0 +1,47 @@
+name: fishi
+version: 0.1.0
+description: >
+  FISHI — Your AI Dev Team That Actually Ships. Autonomous agent framework
+  for Claude Code that takes projects from idea to deployment with minimal
+  human intervention. Use when starting new projects, managing multi-agent
+  development, or orchestrating autonomous workflows.
+license: MIT
+requires:
+  - claude-code >= 1.0.0
+provides:
+  agents:
+    - agents/master-orchestrator.md
+    - agents/coordinators/planning-lead.md
+    - agents/coordinators/dev-lead.md
+    - agents/coordinators/quality-lead.md
+    - agents/coordinators/ops-lead.md
+    - agents/research-agent.md
+    - agents/planning-agent.md
+    - agents/architect-agent.md
+    - agents/backend-agent.md
+    - agents/frontend-agent.md
+    - agents/uiux-agent.md
+    - agents/fullstack-agent.md
+    - agents/devops-agent.md
+    - agents/testing-agent.md
+    - agents/security-agent.md
+    - agents/docs-agent.md
+    - agents/writing-agent.md
+    - agents/marketing-agent.md
+  skills:
+    - skills/brainstorming/
+    - skills/brownfield-analysis/
+    - skills/taskboard-ops/
+    - skills/code-gen/
+    - skills/debugging/
+    - skills/api-design/
+    - skills/testing/
+    - skills/deployment/
+  commands:
+    - commands/fishi-init.md
+    - commands/fishi-status.md
+    - commands/fishi-resume.md
+    - commands/fishi-gate.md
+    - commands/fishi-board.md
+    - commands/fishi-sprint.md
+    - commands/fishi-reset.md

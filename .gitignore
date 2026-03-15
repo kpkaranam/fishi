@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.trees/
+.fishi/logs/
+*.tsbuildinfo
+.env
+.env.local
+coverage/
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

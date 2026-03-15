@@ -1,0 +1,20 @@
+{
+  "name": "fishi-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/core",
+    "packages/cli",
+    "packages/plugin"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:cli": "npm run build -w packages/cli",
+    "test": "npm run test --workspaces",
+    "clean": "npm run clean --workspaces",
+    "dev": "npm run dev -w packages/cli"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

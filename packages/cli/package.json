@@ -1,0 +1,64 @@
+{
+  "name": "fishi",
+  "version": "0.1.0",
+  "description": "FISHI — Your AI Dev Team That Actually Ships. Autonomous agent framework for Claude Code.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "fishi": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean",
+    "dev": "tsup src/index.ts --format esm --watch --onSuccess 'node dist/index.js'",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fishi/core": "*",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^9.2.0",
+    "ora": "^8.0.0",
+    "yaml": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "agent",
+    "autonomous",
+    "development",
+    "framework",
+    "multi-agent",
+    "orchestration",
+    "tdd",
+    "worktree",
+    "project-management"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pkkar/fishi"
+  },
+  "homepage": "https://github.com/pkkar/fishi#readme",
+  "bugs": {
+    "url": "https://github.com/pkkar/fishi/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}
