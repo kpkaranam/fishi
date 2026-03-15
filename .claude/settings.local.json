@@ -1,0 +1,12 @@
+{
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "agent-sdk-dev@claude-code-plugins": true,
+    "firecrawl@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:*)"
+    ]
+  }
+}
