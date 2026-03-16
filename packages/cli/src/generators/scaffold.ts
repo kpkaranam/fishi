@@ -1,5 +1,5 @@
-import type { InitOptions, ProjectType, ScaffoldResult, BrownfieldAnalysisData } from '@fishi/core';
-import { generateScaffold } from '@fishi/core';
+import type { InitOptions, ProjectType, ScaffoldResult, BrownfieldAnalysisData } from '@qlucent/fishi-core';
+import { generateScaffold } from '@qlucent/fishi-core';
 
 interface ScaffoldOptions extends InitOptions {
   projectName: string;

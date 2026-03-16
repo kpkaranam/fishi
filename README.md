@@ -3,7 +3,7 @@
 > **F**uck **I**t, **SH**ip **I**t — An autonomous agent framework for Claude Code that takes projects from **idea to deployment** with minimal human intervention.
 
 ```bash
-npx fishi init "Build me a SaaS invoicing platform with Stripe"
+npx @qlucent/fishi init "Build me a SaaS invoicing platform with Stripe"
 ```
 
 Then run `claude` and watch 18 AI agents plan, code, test, and deploy your project.
@@ -49,7 +49,7 @@ You approve at each gate. Between gates, agents work autonomously.
 ```bash
 # New project
 mkdir my-app && cd my-app
-npx fishi init "Build a real-time chat app with WebSocket"
+npx @qlucent/fishi init "Build a real-time chat app with WebSocket"
 
 # Start Claude Code
 claude
@@ -61,7 +61,7 @@ claude
 ### Option 2: Interactive Wizard
 
 ```bash
-npx fishi init
+npx @qlucent/fishi init
 # Prompts: What are you building? Cost mode? Language? Framework?
 ```
 
@@ -69,7 +69,7 @@ npx fishi init
 
 ```bash
 cd my-existing-project
-npx fishi init
+npx @qlucent/fishi init
 # Auto-detects: language, framework, ORM, tests, patterns, tech debt
 # Generates CLAUDE.md from your codebase conventions
 ```

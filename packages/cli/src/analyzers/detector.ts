@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { DetectionResult, DetectionCheck, ProjectType } from '@fishi/core';
+import type { DetectionResult, DetectionCheck, ProjectType } from '@qlucent/fishi-core';
 
 export async function detectProjectType(targetDir: string): Promise<DetectionResult> {
   const checks: DetectionCheck[] = [];

@@ -1,5 +1,5 @@
 {
-  "name": "@fishi/core",
+  "name": "@qlucent/fishi-core",
   "version": "0.1.0",
   "description": "Shared templates, types, and generators for the FISHI framework",
   "license": "MIT",
@@ -18,8 +18,15 @@
     "clean": "rm -rf dist",
     "test": "vitest run"
   },
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kpkaranam/fishi"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

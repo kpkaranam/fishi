@@ -3,7 +3,7 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import path from 'path';
 import fs from 'fs';
-import type { CostMode, InitOptions, ProjectType } from '@fishi/core';
+import type { CostMode, InitOptions, ProjectType } from '@qlucent/fishi-core';
 import { detectProjectType } from '../analyzers/detector.js';
 import { runBrownfieldAnalysis, type BrownfieldAnalysis } from '../analyzers/brownfield.js';
 import { generateBrownfieldReport } from '../analyzers/brownfield-report.js';

@@ -21,4 +21,4 @@ export type {
   TaskStatus,
   GateStatus,
   AgentRole,
-} from '@fishi/core';
+} from '@qlucent/fishi-core';
