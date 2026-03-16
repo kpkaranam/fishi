@@ -9,4 +9,4 @@ coverage/
 .DS_Store
 Thumbs.db
 .claude/settings.local.json
-FISHI-v2-*.md
+internal-docs/
