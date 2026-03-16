@@ -50,11 +50,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/pkkar/fishi"
+    "url": "https://github.com/kpkaranam/fishi"
   },
-  "homepage": "https://github.com/pkkar/fishi#readme",
+  "homepage": "https://github.com/kpkaranam/fishi#readme",
   "bugs": {
-    "url": "https://github.com/pkkar/fishi/issues"
+    "url": "https://github.com/kpkaranam/fishi/issues"
   },
   "files": [
     "dist",
