@@ -1,9 +1,11 @@
 import { mkdir, writeFile, readFile, appendFile } from 'fs/promises';
+import { readFile as fsReadFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 
 import type { InitOptions, ProjectType } from '../types/index.js';
 import type { TemplateContext } from '../types/templates.js';
+import { mergeClaudeMd, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies.js';
 
 // Agent templates
 import { getMasterOrchestratorTemplate } from '../templates/agents/master-orchestrator.js';
@@ -81,10 +83,19 @@ import { getAgentRegistryTemplate } from '../templates/configs/agent-registry.js
 import { getGitignoreAdditions } from '../templates/configs/gitignore-additions.js';
 import { getModelRoutingReference } from '../templates/configs/model-routing.js';
 
+export type ConflictResolution = 'skip' | 'merge' | 'replace';
+
+export interface FileResolutionMap {
+  categories: Record<string, ConflictResolution>;
+  files: Record<string, ConflictResolution>;
+}
+
 export interface ScaffoldOptions extends InitOptions {
   projectName: string;
   projectType: ProjectType;
   brownfieldAnalysis?: BrownfieldAnalysisData;
+  resolutions?: FileResolutionMap;
+  docsReadmeExists?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -100,8 +111,19 @@ export async function generateScaffold(
   options: ScaffoldOptions
 ): Promise<ScaffoldResult> {
   let filesCreated = 0;
+  const resolutions = options.resolutions;
 
-  async function write(relativePath: string, content: string): Promise<void> {
+  async function write(relativePath: string, content: string, category?: string): Promise<void> {
+    if (resolutions) {
+      const fileRes = resolutions.files[relativePath];
+      const catRes = category ? resolutions.categories[category] : undefined;
+      const resolution = fileRes || catRes;
+
+      if (resolution === 'skip') return;
+      // 'merge' is handled by caller before calling write()
+      // 'replace' and undefined fall through to normal write
+    }
+
     const fullPath = join(targetDir, relativePath);
     await mkdir(dirname(fullPath), { recursive: true });
     await writeFile(fullPath, content, 'utf-8');
@@ -156,44 +178,44 @@ export async function generateScaffold(
     await mkdir(join(targetDir, dir), { recursive: true });
   }
 
-  // ── Agents (1 master + 4 coordinators + 12 workers = 17) ──────────
-  await write('.claude/agents/master-orchestrator.md', getMasterOrchestratorTemplate());
-  await write('.claude/agents/coordinators/planning-lead.md', planningLeadTemplate(ctx));
-  await write('.claude/agents/coordinators/dev-lead.md', devLeadTemplate(ctx));
-  await write('.claude/agents/coordinators/quality-lead.md', qualityLeadTemplate(ctx));
-  await write('.claude/agents/coordinators/ops-lead.md', opsLeadTemplate(ctx));
-  await write('.claude/agents/research-agent.md', researchAgentTemplate(ctx));
-  await write('.claude/agents/planning-agent.md', planningAgentTemplate(ctx));
-  await write('.claude/agents/architect-agent.md', architectAgentTemplate(ctx));
-  await write('.claude/agents/backend-agent.md', backendAgentTemplate(ctx));
-  await write('.claude/agents/frontend-agent.md', frontendAgentTemplate(ctx));
-  await write('.claude/agents/uiux-agent.md', uiuxAgentTemplate(ctx));
-  await write('.claude/agents/fullstack-agent.md', fullstackAgentTemplate(ctx));
-  await write('.claude/agents/devops-agent.md', devopsAgentTemplate(ctx));
-  await write('.claude/agents/testing-agent.md', testingAgentTemplate(ctx));
-  await write('.claude/agents/security-agent.md', securityAgentTemplate(ctx));
-  await write('.claude/agents/docs-agent.md', docsAgentTemplate(ctx));
-  await write('.claude/agents/writing-agent.md', writingAgentTemplate(ctx));
-  await write('.claude/agents/marketing-agent.md', marketingAgentTemplate(ctx));
+  // ── Agents (1 master + 4 coordinators + 13 workers = 18) ──────────
+  await write('.claude/agents/master-orchestrator.md', getMasterOrchestratorTemplate(), 'agents');
+  await write('.claude/agents/coordinators/planning-lead.md', planningLeadTemplate(ctx), 'agents');
+  await write('.claude/agents/coordinators/dev-lead.md', devLeadTemplate(ctx), 'agents');
+  await write('.claude/agents/coordinators/quality-lead.md', qualityLeadTemplate(ctx), 'agents');
+  await write('.claude/agents/coordinators/ops-lead.md', opsLeadTemplate(ctx), 'agents');
+  await write('.claude/agents/research-agent.md', researchAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/planning-agent.md', planningAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/architect-agent.md', architectAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/backend-agent.md', backendAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/frontend-agent.md', frontendAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/uiux-agent.md', uiuxAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/fullstack-agent.md', fullstackAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/devops-agent.md', devopsAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/testing-agent.md', testingAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/security-agent.md', securityAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/docs-agent.md', docsAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/writing-agent.md', writingAgentTemplate(ctx), 'agents');
+  await write('.claude/agents/marketing-agent.md', marketingAgentTemplate(ctx), 'agents');
   const agentCount = 18;
 
   // ── Agent Factory Templates ───────────────────────────────────────
   await write('.fishi/agent-factory/agent-template.md', getAgentFactoryTemplate());
   await write('.fishi/agent-factory/coordinator-template.md', getCoordinatorFactoryTemplate());
 
-  // ── Skills (11) ───────────────────────────────────────────────────
-  await write('.claude/skills/brainstorming/SKILL.md', getBrainstormingSkill());
-  await write('.claude/skills/brownfield-analysis/SKILL.md', getBrownfieldAnalysisSkill());
-  await write('.claude/skills/taskboard-ops/SKILL.md', getTaskboardOpsSkill());
-  await write('.claude/skills/code-gen/SKILL.md', getCodeGenSkill());
-  await write('.claude/skills/debugging/SKILL.md', getDebuggingSkill());
-  await write('.claude/skills/api-design/SKILL.md', getApiDesignSkill());
-  await write('.claude/skills/testing/SKILL.md', getTestingSkill());
-  await write('.claude/skills/deployment/SKILL.md', getDeploymentSkill());
-  await write('.claude/skills/prd/SKILL.md', getPrdSkill());
-  await write('.claude/skills/brownfield-discovery/SKILL.md', getBrownfieldDiscoverySkill());
-  await write('.claude/skills/adaptive-taskgraph/SKILL.md', getAdaptiveTaskGraphSkill());
-  await write('.claude/skills/documentation/SKILL.md', getDocumentationSkill());
+  // ── Skills (12) ───────────────────────────────────────────────────
+  await write('.claude/skills/brainstorming/SKILL.md', getBrainstormingSkill(), 'skills');
+  await write('.claude/skills/brownfield-analysis/SKILL.md', getBrownfieldAnalysisSkill(), 'skills');
+  await write('.claude/skills/taskboard-ops/SKILL.md', getTaskboardOpsSkill(), 'skills');
+  await write('.claude/skills/code-gen/SKILL.md', getCodeGenSkill(), 'skills');
+  await write('.claude/skills/debugging/SKILL.md', getDebuggingSkill(), 'skills');
+  await write('.claude/skills/api-design/SKILL.md', getApiDesignSkill(), 'skills');
+  await write('.claude/skills/testing/SKILL.md', getTestingSkill(), 'skills');
+  await write('.claude/skills/deployment/SKILL.md', getDeploymentSkill(), 'skills');
+  await write('.claude/skills/prd/SKILL.md', getPrdSkill(), 'skills');
+  await write('.claude/skills/brownfield-discovery/SKILL.md', getBrownfieldDiscoverySkill(), 'skills');
+  await write('.claude/skills/adaptive-taskgraph/SKILL.md', getAdaptiveTaskGraphSkill(), 'skills');
+  await write('.claude/skills/documentation/SKILL.md', getDocumentationSkill(), 'skills');
   const skillCount = 12;
 
   // ── Hooks (7 .mjs scripts) ───────────────────────────────────────
@@ -226,15 +248,15 @@ export async function generateScaffold(
   await write('.fishi/todos/agents/testing-agent.md', todoTemplate('testing-agent'));
   await write('.fishi/todos/agents/devops-agent.md', todoTemplate('devops-agent'));
 
-  // ── Slash Commands (7) ────────────────────────────────────────────
-  await write('.claude/commands/fishi-init.md', getInitCommand());
-  await write('.claude/commands/fishi-status.md', getStatusCommand());
-  await write('.claude/commands/fishi-resume.md', getResumeCommand());
-  await write('.claude/commands/fishi-gate.md', getGateCommand());
-  await write('.claude/commands/fishi-board.md', getBoardCommand());
-  await write('.claude/commands/fishi-sprint.md', getSprintCommand());
-  await write('.claude/commands/fishi-reset.md', getResetCommand());
-  await write('.claude/commands/fishi-prd.md', getPrdCommand());
+  // ── Slash Commands (8) ────────────────────────────────────────────
+  await write('.claude/commands/fishi-init.md', getInitCommand(), 'commands');
+  await write('.claude/commands/fishi-status.md', getStatusCommand(), 'commands');
+  await write('.claude/commands/fishi-resume.md', getResumeCommand(), 'commands');
+  await write('.claude/commands/fishi-gate.md', getGateCommand(), 'commands');
+  await write('.claude/commands/fishi-board.md', getBoardCommand(), 'commands');
+  await write('.claude/commands/fishi-sprint.md', getSprintCommand(), 'commands');
+  await write('.claude/commands/fishi-reset.md', getResetCommand(), 'commands');
+  await write('.claude/commands/fishi-prd.md', getPrdCommand(), 'commands');
   const commandCount = 8;
 
   // ── Config Files ──────────────────────────────────────────────────
@@ -246,16 +268,42 @@ export async function generateScaffold(
     language: options.language,
     framework: options.framework,
   }));
-  await write('.claude/settings.json', getSettingsJsonTemplate());
-  await write('.claude/CLAUDE.md', getClaudeMdTemplate({
+  // settings.json
+  const settingsContent = getSettingsJsonTemplate();
+  if (resolutions?.categories['settings-json'] === 'merge') {
+    const existingRaw = await fsReadFile(join(targetDir, '.claude', 'settings.json'), 'utf-8');
+    const merged = mergeSettingsJson(JSON.parse(existingRaw), JSON.parse(settingsContent));
+    await write('.claude/settings.json', JSON.stringify(merged, null, 2) + '\n', 'settings-json');
+  } else {
+    await write('.claude/settings.json', settingsContent, 'settings-json');
+  }
+
+  // CLAUDE.md
+  const claudeMdContent = getClaudeMdTemplate({
     projectName: options.projectName,
     projectDescription: ctx.projectDescription,
     projectType: options.projectType,
     language: options.language,
     framework: options.framework,
     brownfieldAnalysis: options.brownfieldAnalysis,
-  }));
-  await write('.mcp.json', getMcpJsonTemplate());
+  });
+  if (resolutions?.categories['claude-md'] === 'merge') {
+    const existingMd = await fsReadFile(join(targetDir, '.claude', 'CLAUDE.md'), 'utf-8');
+    const merged = mergeClaudeMd(existingMd, claudeMdContent);
+    await write('.claude/CLAUDE.md', merged, 'claude-md');
+  } else {
+    await write('.claude/CLAUDE.md', claudeMdContent, 'claude-md');
+  }
+
+  // .mcp.json
+  const mcpContent = getMcpJsonTemplate();
+  if (resolutions?.categories['mcp-json'] === 'merge') {
+    const existingRaw = await fsReadFile(join(targetDir, '.mcp.json'), 'utf-8');
+    const merged = mergeMcpJson(JSON.parse(existingRaw), JSON.parse(mcpContent));
+    await write('.mcp.json', JSON.stringify(merged, null, 2) + '\n', 'mcp-json');
+  } else {
+    await write('.mcp.json', mcpContent, 'mcp-json');
+  }
   await write('.fishi/state/project.yaml', getProjectYamlTemplate({
     projectName: options.projectName,
     projectDescription: ctx.projectDescription,
@@ -276,7 +324,9 @@ export async function generateScaffold(
   await write('.fishi/learnings/shared.md', '# Learnings \u2014 shared\n\n## Mistakes & Fixes\n\n## Best Practices\n');
 
   // ── Docs ──────────────────────────────────────────────────────────
-  await write('docs/README.md', `# ${options.projectName}\n\nDocumentation will be generated as the project progresses.\n`);
+  if (!options.docsReadmeExists) {
+    await write('docs/README.md', `# ${options.projectName}\n\nDocumentation will be generated as the project progresses.\n`);
+  }
 
   // ── TaskBoard ─────────────────────────────────────────────────────
   await write('.fishi/taskboard/board.md', getEmptyBoard());
@@ -286,9 +336,14 @@ export async function generateScaffold(
   const gitignorePath = join(targetDir, '.gitignore');
   const additions = getGitignoreAdditions();
   if (existsSync(gitignorePath)) {
-    const existing = await readFile(gitignorePath, 'utf-8');
-    if (!existing.includes('.trees/')) {
-      await appendFile(gitignorePath, '\n' + additions, 'utf-8');
+    if (resolutions?.categories['gitignore'] === 'skip') {
+      // Do nothing
+    } else {
+      const existing = await readFile(gitignorePath, 'utf-8');
+      const merged = mergeGitignore(existing, '\n' + additions);
+      if (merged !== existing) {
+        await writeFile(join(targetDir, '.gitignore'), merged, 'utf-8');
+      }
     }
   } else {
     await writeFile(gitignorePath, additions, 'utf-8');
