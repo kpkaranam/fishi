@@ -33,7 +33,7 @@ export async function createBackup(
     }
   }
 
-  const fishiVersion = '0.2.0';
+  const fishiVersion = '0.3.0';
 
   const manifest: BackupManifest = {
     timestamp: now.toISOString(),
