@@ -31,6 +31,8 @@ program
     'balanced'
   )
   .option('--no-interactive', 'Skip interactive wizard even without description')
+  .option('--merge-all', 'Merge all conflicting files (non-interactive brownfield)')
+  .option('--replace-all', 'Replace all conflicting files (non-interactive brownfield)')
   .action(initCommand);
 
 program
