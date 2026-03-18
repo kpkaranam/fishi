@@ -1,3 +1,5 @@
+# NOTE - Brownfield testing in progress, please be causion before initiating. In testing making sure that existing project claude settings does not replace
+
 # FISHI — Your AI Dev Team That Actually Ships
 
 > **F**uck **I**t, **SH**ip **I**t — An autonomous agent framework for Claude Code that takes projects from **idea to deployment** with minimal human intervention.
