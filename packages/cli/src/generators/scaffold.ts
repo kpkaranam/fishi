@@ -7,6 +7,7 @@ interface ScaffoldOptions extends InitOptions {
   brownfieldAnalysis?: BrownfieldAnalysisData;
   resolutions?: FileResolutionMap;
   docsReadmeExists?: boolean;
+  rootClaudeMdExists?: boolean;
 }
 
 export async function scaffold(

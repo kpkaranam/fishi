@@ -4,4 +4,4 @@ export { detectConflicts } from './conflict-detector';
 export type { ConflictMap, ConflictCategory, FileConflict } from './conflict-detector';
 export { createBackup } from './backup-manager';
 export type { BackupManifest } from './backup-manager';
-export { mergeClaudeMd, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies';
+export { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies';

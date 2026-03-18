@@ -502,4 +502,45 @@ describe('generateScaffold — brownfield with resolutions', () => {
     expect(result.filesCreated).toBeGreaterThan(0);
     expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(true);
   });
+
+  it('merges into root CLAUDE.md when rootClaudeMdExists is true', async () => {
+    const dir = createTempDir();
+    writeFileSync(join(dir, 'CLAUDE.md'), '# My Project\n\nProject instructions here.');
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      rootClaudeMdExists: true,
+      resolutions: {
+        categories: { 'root-claude-md': 'merge' },
+        files: {},
+      },
+    });
+
+    // Root CLAUDE.md should have FISHI at top + existing content below
+    const rootMd = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
+    expect(rootMd).toContain('### FISHI Framework');
+    expect(rootMd).toContain('# My Project');
+    expect(rootMd).toContain('Project instructions here.');
+    // FISHI should be before existing content
+    expect(rootMd.indexOf('FISHI:START')).toBeLessThan(rootMd.indexOf('# My Project'));
+    // .claude/CLAUDE.md should NOT be created
+    expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(false);
+  });
+
+  it('skips root CLAUDE.md and .claude/CLAUDE.md when rootClaudeMdExists + skip', async () => {
+    const dir = createTempDir();
+    writeFileSync(join(dir, 'CLAUDE.md'), '# Original');
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      rootClaudeMdExists: true,
+      resolutions: {
+        categories: { 'root-claude-md': 'skip' },
+        files: {},
+      },
+    });
+
+    expect(readFileSync(join(dir, 'CLAUDE.md'), 'utf-8')).toBe('# Original');
+    expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(false);
+  });
 });

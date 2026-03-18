@@ -123,4 +123,33 @@ describe('detectConflicts', () => {
     const result = detectConflicts(dir);
     expect(result.totalConflicts).toBe(3);
   });
+
+  it('detects root CLAUDE.md and sets rootClaudeMdExists', () => {
+    const dir = createTempDir();
+    writeFileSync(join(dir, 'CLAUDE.md'), '# My Project');
+    const result = detectConflicts(dir);
+    expect(result.rootClaudeMdExists).toBe(true);
+    const rootCat = result.categories.find(c => c.name === 'root-claude-md');
+    expect(rootCat).toBeDefined();
+    expect(rootCat!.conflicts).toHaveLength(1);
+    expect(rootCat!.conflicts[0].path).toBe('CLAUDE.md');
+  });
+
+  it('suppresses .claude/CLAUDE.md category when root CLAUDE.md exists', () => {
+    const dir = createTempDir();
+    writeFileSync(join(dir, 'CLAUDE.md'), '# Root');
+    mkdirSync(join(dir, '.claude'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'CLAUDE.md'), '# Inner');
+    const result = detectConflicts(dir);
+    const claudeMd = result.categories.find(c => c.name === 'claude-md');
+    expect(claudeMd!.conflicts).toHaveLength(0);
+  });
+
+  it('rootClaudeMdExists is false when no root CLAUDE.md', () => {
+    const dir = createTempDir();
+    const result = detectConflicts(dir);
+    expect(result.rootClaudeMdExists).toBe(false);
+    const rootCat = result.categories.find(c => c.name === 'root-claude-md');
+    expect(rootCat).toBeUndefined();
+  });
 });
