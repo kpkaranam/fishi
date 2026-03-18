@@ -260,6 +260,7 @@ export async function initCommand(
       brownfieldAnalysis: brownfieldData,
       resolutions,
       docsReadmeExists: conflictResult?.docsReadmeExists,
+      rootClaudeMdExists: conflictResult?.rootClaudeMdExists,
     });
 
     // Write brownfield report if analysis was performed

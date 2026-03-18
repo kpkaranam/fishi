@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 
 import type { InitOptions, ProjectType } from '../types/index.js';
 import type { TemplateContext } from '../types/templates.js';
-import { mergeClaudeMd, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies.js';
+import { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies.js';
 
 // Agent templates
 import { getMasterOrchestratorTemplate } from '../templates/agents/master-orchestrator.js';
@@ -96,6 +96,7 @@ export interface ScaffoldOptions extends InitOptions {
   brownfieldAnalysis?: BrownfieldAnalysisData;
   resolutions?: FileResolutionMap;
   docsReadmeExists?: boolean;
+  rootClaudeMdExists?: boolean;
 }
 
 export interface ScaffoldResult {
@@ -278,7 +279,7 @@ export async function generateScaffold(
     await write('.claude/settings.json', settingsContent, 'settings-json');
   }
 
-  // CLAUDE.md
+  // CLAUDE.md — root CLAUDE.md takes priority over .claude/CLAUDE.md
   const claudeMdContent = getClaudeMdTemplate({
     projectName: options.projectName,
     projectDescription: ctx.projectDescription,
@@ -287,7 +288,22 @@ export async function generateScaffold(
     framework: options.framework,
     brownfieldAnalysis: options.brownfieldAnalysis,
   });
-  if (resolutions?.categories['claude-md'] === 'merge') {
+  if (options.rootClaudeMdExists) {
+    // Root CLAUDE.md exists — merge into it, skip .claude/CLAUDE.md
+    const rootResolution = resolutions?.categories['root-claude-md'];
+    if (rootResolution === 'merge') {
+      const existingMd = await fsReadFile(join(targetDir, 'CLAUDE.md'), 'utf-8');
+      const merged = mergeClaudeMdTop(existingMd, claudeMdContent);
+      const fullPath = join(targetDir, 'CLAUDE.md');
+      await writeFile(fullPath, merged, 'utf-8');
+      filesCreated++;
+    } else if (rootResolution === 'replace') {
+      const fullPath = join(targetDir, 'CLAUDE.md');
+      await writeFile(fullPath, claudeMdContent, 'utf-8');
+      filesCreated++;
+    }
+    // skip: don't touch root CLAUDE.md, don't create .claude/CLAUDE.md
+  } else if (resolutions?.categories['claude-md'] === 'merge') {
     const existingMd = await fsReadFile(join(targetDir, '.claude', 'CLAUDE.md'), 'utf-8');
     const merged = mergeClaudeMd(existingMd, claudeMdContent);
     await write('.claude/CLAUDE.md', merged, 'claude-md');

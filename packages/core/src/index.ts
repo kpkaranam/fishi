@@ -134,4 +134,4 @@ export { detectConflicts } from './generators/index';
 export type { ConflictMap, ConflictCategory, FileConflict } from './generators/index';
 export { createBackup } from './generators/index';
 export type { BackupManifest } from './generators/index';
-export { mergeClaudeMd, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './generators/index';
+export { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './generators/index';

@@ -18,6 +18,7 @@ export interface ConflictMap {
   hasConflicts: boolean;
   totalConflicts: number;
   docsReadmeExists: boolean;
+  rootClaudeMdExists: boolean;
 }
 
 const FISHI_FILES: Record<string, { label: string; files: string[] }> = {
@@ -96,7 +97,16 @@ export function detectConflicts(targetDir: string): ConflictMap {
   const categories: ConflictCategory[] = [];
   let totalConflicts = 0;
 
+  // Check for root CLAUDE.md first — it takes priority over .claude/CLAUDE.md
+  const rootClaudeMdExists = existsSync(join(targetDir, 'CLAUDE.md'));
+
   for (const [name, def] of Object.entries(FISHI_FILES)) {
+    // Suppress .claude/CLAUDE.md category when root CLAUDE.md exists
+    if (name === 'claude-md' && rootClaudeMdExists) {
+      categories.push({ name, label: def.label, conflicts: [] });
+      continue;
+    }
+
     const conflicts: FileConflict[] = [];
 
     for (const relPath of def.files) {
@@ -111,6 +121,17 @@ export function detectConflicts(targetDir: string): ConflictMap {
     totalConflicts += conflicts.length;
   }
 
+  // Add root-claude-md category if root CLAUDE.md exists
+  if (rootClaudeMdExists) {
+    const stat = statSync(join(targetDir, 'CLAUDE.md'));
+    categories.unshift({
+      name: 'root-claude-md',
+      label: 'CLAUDE.md (root)',
+      conflicts: [{ path: 'CLAUDE.md', size: stat.size }],
+    });
+    totalConflicts += 1;
+  }
+
   const docsReadmeExists = existsSync(join(targetDir, 'docs', 'README.md'));
 
   return {
@@ -118,5 +139,6 @@ export function detectConflicts(targetDir: string): ConflictMap {
     hasConflicts: totalConflicts > 0,
     totalConflicts,
     docsReadmeExists,
+    rootClaudeMdExists,
   };
 }
