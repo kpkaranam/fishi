@@ -4,6 +4,8 @@ import inquirer from 'inquirer';
 import path from 'path';
 import fs from 'fs';
 import type { CostMode, InitOptions, ProjectType } from '@qlucent/fishi-core';
+import { detectConflicts, createBackup } from '@qlucent/fishi-core';
+import type { FileResolutionMap, ConflictResolution } from '@qlucent/fishi-core';
 import { detectProjectType } from '../analyzers/detector.js';
 import { runBrownfieldAnalysis, type BrownfieldAnalysis } from '../analyzers/brownfield.js';
 import { generateBrownfieldReport } from '../analyzers/brownfield-report.js';
@@ -14,6 +16,8 @@ interface InitActionOptions {
   framework?: string;
   costMode: string;
   interactive?: boolean;
+  mergeAll?: boolean;
+  replaceAll?: boolean;
 }
 
 export async function initCommand(
@@ -28,16 +32,23 @@ export async function initCommand(
   console.log(chalk.gray('  Autonomous agent framework for Claude Code'));
   console.log('');
 
-  // Check if already initialized
+  // Re-init guard: ask instead of hard exit
   if (fs.existsSync(path.join(targetDir, '.fishi'))) {
-    console.log(
-      chalk.yellow('  ⚠ FISHI is already initialized in this directory.')
-    );
-    console.log(chalk.gray('  Run `fishi status` to see project state.'));
-    console.log(
-      chalk.gray('  Run `fishi reset` to start over from a checkpoint.')
-    );
-    return;
+    if (options.interactive !== false) {
+      const { reinit } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'reinit',
+        message: 'FISHI is already initialized in this directory. Re-initialize?',
+        default: false,
+      }]);
+      if (!reinit) {
+        console.log(chalk.gray('  Run `fishi status` to see project state.'));
+        return;
+      }
+    } else {
+      console.log(chalk.yellow('  ⚠ FISHI already initialized. Run `fishi status` to see project state.'));
+      return;
+    }
   }
 
   // Step 1: Detect project type
@@ -149,6 +160,69 @@ export async function initCommand(
     }
   }
 
+  // ── Conflict Detection ──────────────────────────────────────────
+  const conflictResult = detectConflicts(targetDir);
+  let resolutions: FileResolutionMap | undefined;
+
+  if (conflictResult.hasConflicts) {
+    console.log('');
+    console.log(chalk.yellow(`  ⚠ Found ${conflictResult.totalConflicts} existing file(s) that FISHI wants to create.`));
+    console.log('');
+
+    // Always backup first
+    const backupSpinner = ora('Backing up existing files...').start();
+    const allConflictPaths = conflictResult.categories.flatMap(c => c.conflicts.map(f => f.path));
+    const backupPath = await createBackup(targetDir, allConflictPaths);
+    backupSpinner.succeed(`Backup created at ${path.relative(targetDir, backupPath)}`);
+    console.log('');
+
+    // Interactive resolution
+    resolutions = { categories: {}, files: {} };
+
+    if (options.interactive !== false) {
+      for (const cat of conflictResult.categories) {
+        if (cat.conflicts.length === 0) continue;
+
+        const conflictSummary = cat.conflicts.length === 1
+          ? `Found existing ${cat.label} (${cat.conflicts[0].size} bytes)`
+          : `Found ${cat.conflicts.length} existing ${cat.label} files`;
+
+        // Agent/skill/command files can't be safely merged (YAML frontmatter + markdown)
+        const noMergeCategories = ['agents', 'skills', 'commands'];
+        const canMerge = !noMergeCategories.includes(cat.name);
+
+        const choices = canMerge
+          ? [
+              { name: 'Merge — add FISHI content alongside existing', value: 'merge' },
+              { name: 'Skip — leave existing files untouched', value: 'skip' },
+              { name: 'Replace — overwrite with FISHI version (backup saved)', value: 'replace' },
+            ]
+          : [
+              { name: 'Skip — leave existing files untouched', value: 'skip' },
+              { name: 'Replace — overwrite with FISHI version (backup saved)', value: 'replace' },
+            ];
+
+        const { action } = await inquirer.prompt([{
+          type: 'list',
+          name: 'action',
+          message: `${conflictSummary}. How should FISHI handle this?`,
+          choices,
+          default: canMerge ? 'merge' : 'skip',
+        }]);
+
+        resolutions.categories[cat.name] = action as ConflictResolution;
+      }
+    } else {
+      // Non-interactive defaults
+      const defaultAction: ConflictResolution = options.mergeAll ? 'merge' : options.replaceAll ? 'replace' : 'skip';
+      for (const cat of conflictResult.categories) {
+        if (cat.conflicts.length > 0) {
+          resolutions.categories[cat.name] = defaultAction;
+        }
+      }
+    }
+  }
+
   // Step 4: Scaffold
   console.log('');
   const scaffoldSpinner = ora('Scaffolding FISHI framework...').start();
@@ -184,6 +258,8 @@ export async function initCommand(
       projectName,
       projectType: detection.type,
       brownfieldAnalysis: brownfieldData,
+      resolutions,
+      docsReadmeExists: conflictResult?.docsReadmeExists,
     });
 
     // Write brownfield report if analysis was performed

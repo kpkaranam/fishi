@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { generateScaffold } from '../index';
@@ -395,5 +395,111 @@ describe('generateScaffold', () => {
       expect(config).toContain('typescript');
       expect(config).toContain('nextjs');
     });
+  });
+});
+
+describe('generateScaffold — brownfield with resolutions', () => {
+  let tempDir: string;
+
+  function createTempDir(): string {
+    tempDir = mkdtempSync(join(tmpdir(), 'fishi-bf-'));
+    return tempDir;
+  }
+
+  afterEach(() => {
+    if (tempDir && existsSync(tempDir)) {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  const defaultOptions: ScaffoldOptions = {
+    projectName: 'test-brownfield',
+    projectType: 'brownfield',
+    interactive: false,
+    costMode: 'balanced',
+    description: 'A test brownfield project',
+  };
+
+  it('skips CLAUDE.md when resolution is skip', async () => {
+    const dir = createTempDir();
+    mkdirSync(join(dir, '.claude'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'CLAUDE.md'), '# Original');
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      resolutions: {
+        categories: { 'claude-md': 'skip' },
+        files: {},
+      },
+    });
+
+    expect(readFileSync(join(dir, '.claude', 'CLAUDE.md'), 'utf-8')).toBe('# Original');
+  });
+
+  it('merges settings.json when resolution is merge', async () => {
+    const dir = createTempDir();
+    mkdirSync(join(dir, '.claude'), { recursive: true });
+    const existing = JSON.stringify({
+      hooks: { PostToolUse: [{ matcher: 'Write', command: 'prettier' }] },
+      permissions: { allow: ['Read'], deny: [] },
+    });
+    writeFileSync(join(dir, '.claude', 'settings.json'), existing);
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      resolutions: {
+        categories: { 'settings-json': 'merge' },
+        files: {},
+      },
+    });
+
+    const result = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf-8'));
+    // Existing hook preserved
+    expect(result.hooks.PostToolUse.some((h: any) => h.command === 'prettier')).toBe(true);
+    // FISHI hooks added
+    expect(result.hooks.SessionStart).toBeDefined();
+  });
+
+  it('skips docs/README.md when docsReadmeExists is true', async () => {
+    const dir = createTempDir();
+    mkdirSync(join(dir, 'docs'), { recursive: true });
+    writeFileSync(join(dir, 'docs', 'README.md'), '# My Docs');
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      docsReadmeExists: true,
+    });
+
+    expect(readFileSync(join(dir, 'docs', 'README.md'), 'utf-8')).toBe('# My Docs');
+  });
+
+  it('skips agents when resolution is skip', async () => {
+    const dir = createTempDir();
+    mkdirSync(join(dir, '.claude', 'agents'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'agents', 'backend-agent.md'), '# My backend');
+
+    await generateScaffold(dir, {
+      ...defaultOptions,
+      resolutions: {
+        categories: { 'agents': 'skip' },
+        files: {},
+      },
+    });
+
+    // Existing file preserved
+    expect(readFileSync(join(dir, '.claude', 'agents', 'backend-agent.md'), 'utf-8')).toBe('# My backend');
+    // Other FISHI agents NOT created (all skipped)
+    expect(existsSync(join(dir, '.claude', 'agents', 'frontend-agent.md'))).toBe(false);
+  });
+
+  it('greenfield path unchanged when no resolutions provided', async () => {
+    const dir = createTempDir();
+    const result = await generateScaffold(dir, defaultOptions);
+
+    expect(result.agentCount).toBe(18);
+    expect(result.skillCount).toBe(12);
+    expect(result.commandCount).toBe(8);
+    expect(result.filesCreated).toBeGreaterThan(0);
+    expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(true);
   });
 });
