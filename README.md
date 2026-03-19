@@ -1,5 +1,3 @@
-# NOTE - Brownfield testing in progress, please be causion before initiating. In testing making sure that existing project claude settings does not replace
-
 # FISHI — Your AI Dev Team That Actually Ships
 
 > **F**uck **I**t, **SH**ip **I**t — An autonomous agent framework for Claude Code that takes projects from **idea to deployment** with minimal human intervention.
@@ -73,8 +71,19 @@ npx @qlucent/fishi init
 cd my-existing-project
 npx @qlucent/fishi init
 # Auto-detects: language, framework, ORM, tests, patterns, tech debt
-# Generates CLAUDE.md from your codebase conventions
+# Safely merges with your existing CLAUDE.md, settings.json, .mcp.json
+# Never overwrites — asks permission for every conflict
 ```
+
+### Option 4: Claude Code Plugin
+
+```bash
+# Inside Claude Code:
+/plugin marketplace add kpkaranam/fishi
+/plugin install fishi@qlucent-fishi
+```
+
+Lightweight install — agents, skills, commands, and hooks without the full scaffold.
 
 ---
 
@@ -103,16 +112,20 @@ npx @qlucent/fishi init
 - Epics, stories, tasks, sprints — all git-tracked
 - No Jira, Asana, or paid tools needed
 
+### Safe Brownfield Initialization
+- Deep codebase analysis: ORM, auth, CSS framework, API style, code patterns, file stats, tech debt
+- **Conflict detection** — scans for existing files before writing anything
+- **Always backs up** — timestamped snapshots in `.fishi/backup/` before any modification
+- **Interactive conflict resolution** — per-category Skip / Merge / Replace prompts
+- **Smart merging** — union merge for settings.json (hooks + permissions), additive for .mcp.json, FISHI section prepended to root CLAUDE.md for priority
+- **Non-interactive mode** — `--merge-all` or `--replace-all` flags for CI/automation
+- CLAUDE.md auto-populated from discovered conventions
+- Adaptive task graphs that work WITH existing code
+
 ### Safety
 - 56 allow rules + 24 deny rules for Claude Code permissions
 - Runtime safety hook blocks: `rm -rf /`, `sudo`, `git push --force origin main`, `drop database`, etc.
 - pnpm enforced (npm/yarn blocked)
-
-### Brownfield-Ready
-- Deep codebase analysis: ORM, auth, CSS framework, API style, code patterns, file stats, tech debt
-- CLAUDE.md auto-populated from discovered conventions
-- Brownfield-specific PRD sections for existing system analysis
-- Adaptive task graphs that work WITH existing code
 
 ---
 
@@ -123,8 +136,10 @@ npx @qlucent/fishi init
 | Command | Description |
 |---|---|
 | `fishi init [description]` | Initialize FISHI (wizard or zero-config) |
+| `fishi init --merge-all` | Brownfield init — merge all conflicts automatically |
+| `fishi init --replace-all` | Brownfield init — replace all conflicts (backup saved) |
 | `fishi status` | Show project state, TaskBoard, active agents |
-| `fishi validate` | Validate scaffold integrity (82 checks) |
+| `fishi validate` | Validate scaffold integrity |
 | `fishi mcp add <name>` | Add MCP server (github, perplexity, context7, etc.) |
 | `fishi reset [checkpoint]` | Rollback to a checkpoint |
 
@@ -167,6 +182,7 @@ After `fishi init`, your project contains:
 ├── memory/                      # Project context + per-agent memory
 ├── learnings/                   # Mistakes + best practices (local + global)
 ├── todos/                       # Per-agent TODO lists
+├── backup/                      # Timestamped backups of pre-FISHI files
 ├── agent-factory/               # Templates for dynamic agent creation
 └── model-routing.md             # When to use Opus vs Sonnet vs Haiku
 ```
@@ -227,6 +243,61 @@ fishi mcp add perplexity    # Web search for research
 fishi mcp add supabase      # Database access
 fishi mcp add playwright    # Browser testing
 ```
+
+---
+
+## Test Coverage
+
+456 tests across 16 test files:
+
+| Category | Tests | What's covered |
+|----------|-------|---------------|
+| Core templates | 302 | All 18 agents, 12 skills, 8 commands, 15 hooks, configs |
+| CLI | 60 | Brownfield analysis, conflict detection, project detection |
+| Brownfield safety | 36 | Conflict detection, backup, merge strategies, resolution map |
+| E2E pipeline | 51 | Every script executed: phase-runner, gate-manager, worktree-manager, todo-manager, memory-manager, learnings-manager, doc-checker, session-start, auto-checkpoint, validate-scaffold |
+| CI | Node 18, 20, 22 | GitHub Actions — all green |
+
+---
+
+## Roadmap
+
+### Coming Soon
+
+#### Sandbox Integration
+Run agents in isolated containers instead of locally. Integration with [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) and [E2B](https://e2b.dev) — each agent gets its own sandboxed environment with YAML-defined security policies. Backend agents get database access, frontend agents don't. No code runs on your local machine.
+
+#### Vibe Mode (`/fishi-quickstart`)
+Match the speed of tools like Lovable and Bolt.new — auto-approve gates, skip the wizard, dev agents start immediately, live preview on `:3000` in 2-3 minutes. Ship fast now, add tests and gates later with progressive enhancement.
+
+#### Frontend Quality Engine
+Fix the #1 complaint about AI coding tools: ugly, generic UIs. FISHI will auto-detect or create design token systems (colors, typography, spacing), maintain a component registry (shadcn/ui, Radix), and use a multi-agent design workflow — UI/UX Agent designs, Frontend Agent codes, Brand Guardian validates. No more hardcoded hex colors or inconsistent spacing.
+
+#### Agent Observability Dashboard
+Real-time view of what 18 agents are doing — phase progress, worktree activity, test results, agent status. Single browser tab to monitor your entire AI dev team.
+
+#### Domain-Specific Agents
+Pre-loaded knowledge for common project types:
+- **SaaS Architect** — Stripe billing, multi-tenancy, subscription management
+- **Marketplace Architect** — escrow, disputes, vendor management
+- **Mobile-First Architect** — PWA, offline sync, push notifications
+- **AI/ML Architect** — RAG pipelines, embeddings, fine-tuning
+
+#### Security Scanning Gate
+Automated OWASP/CWE security checks as a gate requirement before deployment. Unlike vibe coding tools where [10% of generated apps have security vulnerabilities](https://uxplanet.org/i-tested-5-ai-coding-tools-so-you-dont-have-to-b229d4b1a324), FISHI catches them before shipping.
+
+#### Pattern Marketplace
+Pre-built architectural patterns for common integrations — authentication (Auth0, Clerk, JWT), payments (Stripe, PayPal), email (SendGrid, Resend), analytics (PostHog, Plausible). Select at init, architect injects into design, agents build.
+
+---
+
+## Packages
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| [`@qlucent/fishi`](https://www.npmjs.com/package/@qlucent/fishi) | 0.5.0 | CLI — `npx @qlucent/fishi init` |
+| [`@qlucent/fishi-core`](https://www.npmjs.com/package/@qlucent/fishi-core) | 0.5.0 | Shared templates, types, generators |
+| `fishi` (plugin) | 0.5.0 | Claude Code plugin via marketplace |
 
 ---
 
