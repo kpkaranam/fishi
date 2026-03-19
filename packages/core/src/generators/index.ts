@@ -7,3 +7,5 @@ export type { BackupManifest } from './backup-manager';
 export { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies';
 export { emitEvent, readMonitorState, getAgentSummary } from './monitor';
 export type { MonitorState, MonitorEvent, MonitorSummary, DynamicAgent } from './monitor';
+export { detectDocker, readSandboxConfig, readSandboxPolicy, buildSandboxEnv, runInProcessSandbox, runInDockerSandbox, runInSandbox } from './sandbox';
+export type { SandboxMode, SandboxConfig, SandboxPolicy, SandboxRunResult } from './sandbox';
