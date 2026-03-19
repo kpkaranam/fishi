@@ -16,6 +16,5 @@
     "orchestration",
     "tdd",
     "worktree"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
