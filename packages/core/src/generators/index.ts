@@ -5,3 +5,5 @@ export type { ConflictMap, ConflictCategory, FileConflict } from './conflict-det
 export { createBackup } from './backup-manager';
 export type { BackupManifest } from './backup-manager';
 export { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './merge-strategies';
+export { emitEvent, readMonitorState, getAgentSummary } from './monitor';
+export type { MonitorState, MonitorEvent, MonitorSummary, DynamicAgent } from './monitor';

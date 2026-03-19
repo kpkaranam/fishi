@@ -13,3 +13,4 @@ export { getTodoManagerScript } from './todo-manager';
 export { getMemoryManagerScript } from './memory-manager';
 export { getLearningsManagerScript } from './learnings-manager';
 export { getDocCheckerScript } from './doc-checker';
+export { getMonitorEmitterScript } from './monitor-emitter';
