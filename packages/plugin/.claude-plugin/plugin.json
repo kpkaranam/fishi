@@ -17,5 +17,5 @@
     "tdd",
     "worktree"
   ],
-  "hooks": "./hooks.json"
+  "hooks": "./hooks/hooks.json"
 }
