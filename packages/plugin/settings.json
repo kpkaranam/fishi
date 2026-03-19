@@ -1,0 +1,120 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "command": "node .fishi/scripts/session-start.mjs"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "command": "node .fishi/scripts/auto-checkpoint.mjs"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "command": "node .fishi/scripts/auto-checkpoint.mjs"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "node .fishi/scripts/safety-check.mjs"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "node .fishi/scripts/post-edit.mjs"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "Agent",
+      "TodoRead",
+      "TodoWrite",
+      "Bash(pnpm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(bun *)",
+      "Bash(deno *)",
+      "Bash(git *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(cd *)",
+      "Bash(mv *)",
+      "Bash(touch *)",
+      "Bash(tree *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(tr *)",
+      "Bash(cut *)",
+      "Bash(xargs *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(jq *)",
+      "Bash(date *)",
+      "Bash(env *)",
+      "Bash(which *)",
+      "Bash(type *)",
+      "Bash(uname *)",
+      "Bash(whoami *)",
+      "Bash(pwd *)",
+      "Bash(printenv *)",
+      "Bash(tsc *)",
+      "Bash(tsup *)",
+      "Bash(vitest *)",
+      "Bash(eslint *)",
+      "Bash(prettier *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf .)",
+      "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(doas *)",
+      "Bash(shutdown *)",
+      "Bash(reboot *)",
+      "Bash(halt *)",
+      "Bash(poweroff *)",
+      "Bash(mkfs *)",
+      "Bash(dd if=*)",
+      "Bash(> /dev/sda)",
+      "Bash(fdisk *)",
+      "Bash(npm *)",
+      "Bash(yarn *)",
+      "Bash(nmap *)",
+      "Bash(netcat *)",
+      "Bash(nc -l *)",
+      "Bash(:(){ :|:& };:)"
+    ]
+  }
+}

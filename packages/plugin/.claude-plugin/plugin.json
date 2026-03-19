@@ -1,0 +1,22 @@
+{
+  "name": "fishi",
+  "description": "FISHI — Your AI Dev Team That Actually Ships. Autonomous agent framework for Claude Code with 18 agents, 12 skills, 8 commands, and full pipeline orchestration.",
+  "version": "0.4.0",
+  "author": {
+    "name": "Qlucent",
+    "email": "kpkaranam@gmail.com"
+  },
+  "homepage": "https://github.com/kpkaranam/fishi#readme",
+  "repository": "https://github.com/kpkaranam/fishi",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "ai-agents",
+    "autonomous-development",
+    "multi-agent",
+    "orchestration",
+    "tdd",
+    "worktree"
+  ],
+  "hooks": "./hooks.json"
+}
