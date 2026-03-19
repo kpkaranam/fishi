@@ -15,6 +15,7 @@ import {
   getMemoryManagerScript,
   getLearningsManagerScript,
   getDocCheckerScript,
+  getMonitorEmitterScript,
 } from '../index';
 
 describe('Hook / Script Templates', () => {
@@ -34,10 +35,11 @@ describe('Hook / Script Templates', () => {
     ['memory-manager', getMemoryManagerScript],
     ['learnings-manager', getLearningsManagerScript],
     ['doc-checker', getDocCheckerScript],
+    ['monitor-emitter', getMonitorEmitterScript],
   ];
 
-  it('all 15 hooks are accounted for', () => {
-    expect(hooks).toHaveLength(15);
+  it('all 16 hooks are accounted for', () => {
+    expect(hooks).toHaveLength(16);
   });
 
   it.each(hooks)('%s returns a non-empty string', (_name, hookFn) => {

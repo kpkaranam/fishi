@@ -40,7 +40,7 @@ describe('generateScaffold', () => {
     expect(result.agentCount).toBe(18);
     expect(result.skillCount).toBe(12);
     expect(result.commandCount).toBe(8);
-    expect(result.hookCount).toBe(15);
+    expect(result.hookCount).toBe(16);
     expect(result.filesCreated).toBeGreaterThan(0);
   });
 
@@ -180,7 +180,7 @@ describe('generateScaffold', () => {
   });
 
   describe('Hook/script files', () => {
-    it('creates all 15 .mjs scripts', async () => {
+    it('creates all 16 .mjs scripts', async () => {
       const dir = createTempDir();
       await generateScaffold(dir, defaultOptions);
       const scripts = [
@@ -188,7 +188,7 @@ describe('generateScaffold', () => {
         'post-edit', 'safety-check', 'worktree-setup', 'taskboard-update',
         'worktree-manager', 'gate-manager', 'validate-scaffold',
         'phase-runner', 'todo-manager', 'memory-manager',
-        'learnings-manager', 'doc-checker',
+        'learnings-manager', 'doc-checker', 'monitor-emitter',
       ];
       for (const script of scripts) {
         const file = join(dir, '.fishi', 'scripts', `${script}.mjs`);

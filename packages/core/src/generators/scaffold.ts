@@ -61,6 +61,7 @@ import { getTodoManagerScript } from '../templates/hooks/todo-manager.js';
 import { getMemoryManagerScript } from '../templates/hooks/memory-manager.js';
 import { getLearningsManagerScript } from '../templates/hooks/learnings-manager.js';
 import { getDocCheckerScript } from '../templates/hooks/doc-checker.js';
+import { getMonitorEmitterScript } from '../templates/hooks/monitor-emitter.js';
 
 // Command templates
 import { getInitCommand } from '../templates/commands/init-command.js';
@@ -235,7 +236,8 @@ export async function generateScaffold(
   await write('.fishi/scripts/memory-manager.mjs', getMemoryManagerScript());
   await write('.fishi/scripts/learnings-manager.mjs', getLearningsManagerScript());
   await write('.fishi/scripts/doc-checker.mjs', getDocCheckerScript());
-  const hookCount = 15;
+  await write('.fishi/scripts/monitor-emitter.mjs', getMonitorEmitterScript());
+  const hookCount = 16;
 
   // ── Initial TODO Files ─────────────────────────────────────────────
   const todoTemplate = (name: string) => `# TODO — ${name}\n\n## Active\n\n## Completed\n`;
@@ -328,6 +330,12 @@ export async function generateScaffold(
   await write('.fishi/state/agent-registry.yaml', getAgentRegistryTemplate());
   await write('.fishi/state/task-graph.yaml', 'tasks: []\ndependencies: []\n');
   await write('.fishi/state/gates.yaml', 'gates: []\n');
+  await write('.fishi/state/monitor.json', JSON.stringify({
+    events: [],
+    summary: { totalAgentCompletions: 0, totalFilesChanged: 0, totalTokens: 0, tokensByModel: {}, tokensByAgent: {}, toolsUsed: {}, dynamicAgentsCreated: 0 },
+    dynamicAgents: [],
+    lastUpdated: new Date().toISOString()
+  }, null, 2) + '\n');
   await write('.fishi/mcp-registry.yaml', getMcpRegistryTemplate());
   await write('.fishi/model-routing.md', getModelRoutingReference());
 
