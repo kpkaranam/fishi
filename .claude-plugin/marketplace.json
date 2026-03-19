@@ -1,0 +1,15 @@
+{
+  "name": "qlucent-fishi",
+  "description": "FISHI — Autonomous agent framework for Claude Code",
+  "owner": {
+    "name": "Qlucent",
+    "url": "https://github.com/kpkaranam"
+  },
+  "plugins": [
+    {
+      "name": "fishi",
+      "source": "./packages/plugin",
+      "description": "Your AI Dev Team That Actually Ships — 18 agents, 12 skills, 8 commands, full pipeline orchestration with gates, worktrees, checkpoints, and brownfield support."
+    }
+  ]
+}
