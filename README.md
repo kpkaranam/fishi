@@ -1,71 +1,118 @@
-# FISHI — Your AI Dev Team That Actually Ships
+<p align="center">
+  <h1 align="center">FISHI</h1>
+  <p align="center">
+    <strong>Your AI Dev Team That Actually Ships</strong>
+  </p>
+  <p align="center">
+    An autonomous multi-agent framework for Claude Code that takes projects from <b>idea to deployment</b>.
+  </p>
+</p>
 
-> **F**uck **I**t, **SH**ip **I**t — An autonomous agent framework for Claude Code that takes projects from **idea to deployment** with minimal human intervention.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@qlucent/fishi"><img src="https://img.shields.io/npm/v/@qlucent/fishi?style=flat-square&color=0066cc&label=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@qlucent/fishi"><img src="https://img.shields.io/npm/dm/@qlucent/fishi?style=flat-square&color=green" alt="npm downloads"></a>
+  <a href="https://github.com/kpkaranam/fishi/actions"><img src="https://img.shields.io/github/actions/workflow/status/kpkaranam/fishi/ci.yml?style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
+  <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
+  <img src="https://img.shields.io/badge/agents-18-purple?style=flat-square" alt="18 agents">
+  <img src="https://img.shields.io/badge/tests-456-brightgreen?style=flat-square" alt="456 tests">
+  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
+</p>
+
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> &bull;
+  <a href="#-features">Features</a> &bull;
+  <a href="#-how-it-works">How It Works</a> &bull;
+  <a href="#-commands">Commands</a> &bull;
+  <a href="#-roadmap">Roadmap</a>
+</p>
+
+---
 
 ```bash
 npx @qlucent/fishi init "Build me a SaaS invoicing platform with Stripe"
 ```
 
-Then run `claude` and watch 18 AI agents plan, code, test, and deploy your project.
+> Run `claude` and watch **18 AI agents** plan, code, test, and deploy your project.
 
 ---
 
 ## What is FISHI?
 
-FISHI is a framework that turns Claude Code into a full development team. Instead of one AI assistant, you get a coordinated team of specialized agents — a master strategist, team leads, and specialist developers — all working in isolated git branches, submitting PRs, and tracking progress on a built-in project board.
-
-### The 3-Layer Agent Hierarchy
+Most AI coding tools give you **one assistant**. FISHI gives you an **entire development team** — a master strategist, 4 team leads, and 13 specialist developers — all working in isolated git branches, submitting PRs, and tracking progress on a built-in project board.
 
 ```
-Master Agent (Opus) — Strategy & Gates
-  |
-  ├── Planning Lead ── research, planning, architect agents
-  ├── Dev Lead ─────── backend, frontend, fullstack agents
-  ├── Quality Lead ──── testing, security agents
-  └── Ops Lead ──────── devops, docs, writing agents
+                         Master Agent (Opus)
+                     Strategy & Phase Gates Only
+                               |
+          _____________________|_____________________
+         |            |             |                |
+   Planning Lead   Dev Lead    Quality Lead      Ops Lead
+         |            |             |                |
+   research      backend       testing          devops
+   planning      frontend      security         docs
+   architect     fullstack                      writing
+                 uiux                           marketing
 ```
 
-- **Master** makes strategic decisions, manages phase gates, never writes code
-- **Coordinators** break objectives into tasks, assign workers, review output
-- **Workers** execute in isolated git worktrees, submit PRs back
+> **Master** makes strategic decisions, manages phase gates, never writes code.
+> **Coordinators** break objectives into tasks, assign workers, review output.
+> **Workers** execute in isolated git worktrees, submit PRs back.
 
 ### The Pipeline
 
-Every project follows a structured flow. No skipping phases.
+Every project follows a mandatory gated flow:
 
 ```
-User Request → Discovery → PRD → Architecture → Sprint Plan → Development → Deployment
-                GATE        GATE    GATE          GATE                        GATE
+User Request --> Discovery --> PRD --> Architecture --> Sprint Plan --> Development --> Deployment
+                  GATE        GATE      GATE            GATE                           GATE
 ```
 
-You approve at each gate. Between gates, agents work autonomously.
+You approve at each gate. Between gates, agents work **autonomously**.
 
 ---
 
 ## Quick Start
 
-### Option 1: CLI (Recommended)
+<table>
+<tr>
+<td width="50%">
+
+### CLI (Recommended)
 
 ```bash
-# New project
 mkdir my-app && cd my-app
-npx @qlucent/fishi init "Build a real-time chat app with WebSocket"
-
-# Start Claude Code
+npx @qlucent/fishi init "Build a chat app"
 claude
-
-# Begin the pipeline
 > /fishi-init
 ```
 
-### Option 2: Interactive Wizard
+</td>
+<td width="50%">
+
+### Claude Code Plugin
+
+```bash
+# Inside Claude Code:
+/plugin marketplace add kpkaranam/fishi
+/plugin install fishi@qlucent-fishi
+```
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary><b>More installation options</b></summary>
+
+### Interactive Wizard
 
 ```bash
 npx @qlucent/fishi init
 # Prompts: What are you building? Cost mode? Language? Framework?
 ```
 
-### Option 3: Existing Project (Brownfield)
+### Existing Project (Brownfield)
 
 ```bash
 cd my-existing-project
@@ -75,79 +122,165 @@ npx @qlucent/fishi init
 # Never overwrites — asks permission for every conflict
 ```
 
-### Option 4: Claude Code Plugin
+### Non-Interactive (CI/Automation)
 
 ```bash
-# Inside Claude Code:
-/plugin marketplace add kpkaranam/fishi
-/plugin install fishi@qlucent-fishi
+npx @qlucent/fishi init "My project" --merge-all    # Merge all conflicts
+npx @qlucent/fishi init "My project" --replace-all  # Replace all (backup saved)
 ```
 
-Lightweight install — agents, skills, commands, and hooks without the full scaffold.
+</details>
 
 ---
 
 ## Features
 
-### Autonomous Development
-- 18 specialized agents (master + 4 coordinators + 13 workers)
-- Dynamic agent creation — need a Solidity specialist? FISHI creates one
-- Git worktree isolation — each agent works on its own branch
-- PR-based integration — agents submit PRs, you approve merges
+### Multi-Agent Development
 
-### Mandatory Planning
-- Brainstorming before any code (Socratic questioning, 2-3 approaches)
-- PRD creation with 14 sections (user stories, acceptance criteria, non-functional requirements)
-- Architecture design before sprint planning
-- Sprint-based development with TaskBoard tracking
+| What | Count | Details |
+|------|-------|---------|
+| Agents | 18 | 1 master + 4 coordinators + 13 specialists |
+| Skills | 12 | brainstorming, code-gen, debugging, testing, deployment, PRD... |
+| Commands | 8 | `/fishi-init`, `/fishi-gate`, `/fishi-board`, `/fishi-sprint`... |
+| Hook Scripts | 15 | session-start, auto-checkpoint, safety-check, phase-runner... |
+| Permission Rules | 80 | 56 allow + 24 deny |
+| Pipeline Phases | 8 | 5 with approval gates |
+
+<details>
+<summary><b>See all 18 agents</b></summary>
+
+| Layer | Agent | Role |
+|-------|-------|------|
+| L0 | Master Orchestrator | Strategy, delegation, gate management |
+| L1 | Planning Lead | Coordinates research, planning, architecture |
+| L1 | Dev Lead | Coordinates backend, frontend, fullstack work |
+| L1 | Quality Lead | Coordinates testing, security audits |
+| L1 | Ops Lead | Coordinates devops, docs, marketing |
+| L2 | Research Agent | Market research, competitive analysis |
+| L2 | Planning Agent | Sprint planning, task breakdown |
+| L2 | Architect Agent | System design, tech stack decisions |
+| L2 | Backend Agent | APIs, services, database logic |
+| L2 | Frontend Agent | UI components, state management |
+| L2 | Fullstack Agent | End-to-end feature implementation |
+| L2 | UI/UX Agent | Design systems, accessibility, responsive layouts |
+| L2 | DevOps Agent | CI/CD, Docker, infrastructure |
+| L2 | Testing Agent | Unit, integration, E2E tests (TDD) |
+| L2 | Security Agent | OWASP audits, vulnerability scanning |
+| L2 | Docs Agent | API docs, architecture guides |
+| L2 | Writing Agent | User-facing copy, README, changelogs |
+| L2 | Marketing Agent | Landing pages, launch materials |
+
+</details>
 
 ### Agent Intelligence
-- **TODO Lists** — every agent has a personal checklist, coordinators assign with priority
+
 - **Memory** — agents remember patterns, decisions, and preferences across sessions
 - **Learnings** — mistakes and best practices persist across projects (`~/.fishi/learnings/`)
+- **TODO Lists** — coordinators assign prioritized tasks to workers
 - **Documentation** — mandatory at every phase, checked before gate approval
 
-### Built-in Project Management
-- Markdown-native Kanban board (`.fishi/taskboard/board.md`)
-- Epics, stories, tasks, sprints — all git-tracked
-- No Jira, Asana, or paid tools needed
+### Safe Brownfield Support
 
-### Safe Brownfield Initialization
-- Deep codebase analysis: ORM, auth, CSS framework, API style, code patterns, file stats, tech debt
-- **Conflict detection** — scans for existing files before writing anything
-- **Always backs up** — timestamped snapshots in `.fishi/backup/` before any modification
-- **Interactive conflict resolution** — per-category Skip / Merge / Replace prompts
-- **Smart merging** — union merge for settings.json (hooks + permissions), additive for .mcp.json, FISHI section prepended to root CLAUDE.md for priority
-- **Non-interactive mode** — `--merge-all` or `--replace-all` flags for CI/automation
+> FISHI never overwrites your existing files without asking.
+
+- **Conflict detection** across 7 categories (CLAUDE.md, settings.json, agents, skills, commands, .mcp.json, .gitignore)
+- **Always backs up** — timestamped snapshots before any modification
+- **Interactive resolution** — per-category `Skip` / `Merge` / `Replace`
+- **Smart merging** — union merge for hooks & permissions, additive for MCP servers, FISHI section prepended to root CLAUDE.md
+- Deep codebase analysis: ORM, auth, CSS, API style, code patterns, tech debt
 - CLAUDE.md auto-populated from discovered conventions
-- Adaptive task graphs that work WITH existing code
 
-### Safety
-- 56 allow rules + 24 deny rules for Claude Code permissions
-- Runtime safety hook blocks: `rm -rf /`, `sudo`, `git push --force origin main`, `drop database`, etc.
-- pnpm enforced (npm/yarn blocked)
+### Built-in Project Management
+
+- Markdown Kanban board — no Jira, Asana, or paid tools needed
+- Epics, stories, tasks, sprints — all git-tracked
+- Checkpoints & session resume — pick up where you left off
+
+### Safety & Permissions
+
+```
+56 allow rules + 24 deny rules
+
+Blocks: rm -rf /, sudo, git push --force origin main, drop database,
+        shutdown, mkfs, nmap, fork bombs...
+
+Enforces: pnpm only (npm/yarn blocked)
+```
+
+---
+
+## How It Works
+
+<table>
+<tr><td>
+
+**Step 1** — You describe what to build
+
+```
+/fishi-init Build a SaaS invoicing platform with Stripe
+```
+
+</td></tr>
+<tr><td>
+
+**Step 2** — FISHI plans it
+
+Discovery (brainstorming) --> PRD (14 sections) --> Architecture (tech stack, APIs) --> Sprint Planning (epics, stories, tasks)
+
+</td></tr>
+<tr><td>
+
+**Step 3** — Agents build it
+
+Dev Lead assigns tasks. Each agent works in an **isolated git worktree**. Quality Lead runs tests in parallel. Work is submitted as PRs.
+
+</td></tr>
+<tr><td>
+
+**Step 4** — You approve at gates
+
+```
+PR: agent/dev-lead/backend-agent/auth-endpoints --> dev
+Files: 3 added, 1 modified | Tests: 12 passing | Coverage: 94%
+
+/fishi-gate approve
+```
+
+</td></tr>
+<tr><td>
+
+**Step 5** — Agents learn and improve
+
+Mistakes recorded. Best practices shared. Memory persists across sessions. Learnings persist across projects.
+
+</td></tr>
+</table>
 
 ---
 
 ## Commands
 
-### CLI Commands
+<details open>
+<summary><b>CLI Commands</b></summary>
 
 | Command | Description |
-|---|---|
+|---------|-------------|
 | `fishi init [description]` | Initialize FISHI (wizard or zero-config) |
-| `fishi init --merge-all` | Brownfield init — merge all conflicts automatically |
-| `fishi init --replace-all` | Brownfield init — replace all conflicts (backup saved) |
-| `fishi status` | Show project state, TaskBoard, active agents |
+| `fishi init --merge-all` | Brownfield — merge all conflicts automatically |
+| `fishi init --replace-all` | Brownfield — replace all (backup saved) |
+| `fishi status` | Project state, TaskBoard, active agents |
 | `fishi validate` | Validate scaffold integrity |
-| `fishi mcp add <name>` | Add MCP server (github, perplexity, context7, etc.) |
+| `fishi mcp add <name>` | Add MCP server |
 | `fishi reset [checkpoint]` | Rollback to a checkpoint |
 
-### Slash Commands (inside Claude)
+</details>
+
+<details open>
+<summary><b>Slash Commands (inside Claude Code)</b></summary>
 
 | Command | Description |
-|---|---|
-| `/fishi-init` | Start the full development pipeline |
+|---------|-------------|
+| `/fishi-init` | Start the development pipeline |
 | `/fishi-status` | Show project progress |
 | `/fishi-board` | Display Kanban board |
 | `/fishi-sprint` | Sprint overview and planning |
@@ -156,71 +289,41 @@ Lightweight install — agents, skills, commands, and hooks without the full sca
 | `/fishi-resume` | Resume from last checkpoint |
 | `/fishi-reset` | Rollback to checkpoint |
 
+</details>
+
 ---
 
 ## Project Structure
 
-After `fishi init`, your project contains:
+<details>
+<summary><b>What <code>fishi init</code> creates</b></summary>
 
 ```
 .claude/
-├── CLAUDE.md                    # Orchestration brain (pipeline enforcement)
-├── settings.json                # Hooks (5) + Permissions (56 allow, 24 deny)
-├── agents/                      # 18 agent definitions
-│   ├── master-orchestrator.md
-│   ├── coordinators/            # planning-lead, dev-lead, quality-lead, ops-lead
-│   └── (13 worker agents)
-├── skills/                      # 12 skills
-└── commands/                    # 8 slash commands
+  CLAUDE.md                    # Orchestration brain (pipeline enforcement)
+  settings.json                # Hooks (5) + Permissions (80 rules)
+  agents/                      # 18 agent definitions
+    master-orchestrator.md
+    coordinators/              # planning-lead, dev-lead, quality-lead, ops-lead
+    (13 worker agents)
+  skills/                      # 12 skills
+  commands/                    # 8 slash commands
 
 .fishi/
-├── fishi.yaml                   # Project configuration
-├── state/                       # Project state, agent registry, gates, checkpoints
-├── taskboard/                   # Kanban board, backlog, sprints, epics
-├── scripts/                     # 15 hook/utility scripts (.mjs, zero-dependency)
-├── plans/                       # PRDs, architecture docs, ADRs
-├── memory/                      # Project context + per-agent memory
-├── learnings/                   # Mistakes + best practices (local + global)
-├── todos/                       # Per-agent TODO lists
-├── backup/                      # Timestamped backups of pre-FISHI files
-├── agent-factory/               # Templates for dynamic agent creation
-└── model-routing.md             # When to use Opus vs Sonnet vs Haiku
+  fishi.yaml                   # Project configuration
+  state/                       # Phase state, agent registry, gates, checkpoints
+  taskboard/                   # Kanban board, backlog, sprints, epics
+  scripts/                     # 15 hook/utility scripts (.mjs, zero deps)
+  plans/                       # PRDs, architecture docs, ADRs
+  memory/                      # Project context + per-agent memory
+  learnings/                   # Mistakes + best practices (local + global)
+  todos/                       # Per-agent TODO lists
+  backup/                      # Timestamped backups of pre-FISHI files
+  agent-factory/               # Templates for dynamic agent creation
+  model-routing.md             # When to use Opus vs Sonnet vs Haiku
 ```
 
----
-
-## How It Works
-
-### 1. You describe what to build
-```
-> /fishi-init Build a SaaS invoicing platform with Stripe integration
-```
-
-### 2. FISHI plans it
-- **Discovery**: Brainstorms with you, explores approaches
-- **PRD**: Creates detailed requirements with acceptance criteria
-- **Architecture**: Designs the system, picks tech stack, defines APIs
-- **Sprint Planning**: Breaks into epics, stories, tasks
-
-### 3. Agents build it
-- Dev Lead assigns tasks to backend/frontend/fullstack agents
-- Each agent works in an isolated git worktree
-- Quality Lead runs testing and security agents in parallel
-- Completed work is reviewed and submitted as PRs
-
-### 4. You approve at gates
-```
-PR: agent/dev-lead/backend-agent/auth-endpoints → dev
-Files: 3 added, 1 modified | Tests: 12 passing | Coverage: 94%
-
-/fishi-gate approve
-```
-
-### 5. Agents learn and improve
-- Mistakes are recorded and avoided next time
-- Best practices are shared across agents
-- Memory persists across sessions
-- Learnings persist across projects
+</details>
 
 ---
 
@@ -229,14 +332,12 @@ Files: 3 added, 1 modified | Tests: 12 passing | Coverage: 94%
 ### Cost Modes
 
 | Mode | Opus Usage | Best For |
-|---|---|---|
+|------|-----------|---------|
 | `performance` | All coordinators + architect | Speed, complex projects |
-| `balanced` (default) | Code review, architecture, security | Most projects |
-| `economy` | Only security + architecture | Budget-conscious, simple projects |
+| `balanced` | Code review, architecture, security | Most projects (default) |
+| `economy` | Only security + architecture | Budget-conscious |
 
 ### MCP Integrations
-
-FISHI auto-configures core MCPs and suggests project-specific ones:
 
 ```bash
 fishi mcp add perplexity    # Web search for research
@@ -248,15 +349,21 @@ fishi mcp add playwright    # Browser testing
 
 ## Test Coverage
 
-456 tests across 16 test files:
+<table>
+<tr>
+<td align="center"><b>456</b><br>Total Tests</td>
+<td align="center"><b>16</b><br>Test Files</td>
+<td align="center"><b>51</b><br>E2E Tests</td>
+<td align="center"><b>3</b><br>Node Versions</td>
+</tr>
+</table>
 
-| Category | Tests | What's covered |
-|----------|-------|---------------|
-| Core templates | 302 | All 18 agents, 12 skills, 8 commands, 15 hooks, configs |
+| Category | Tests | Coverage |
+|----------|-------|---------|
+| Core templates | 302 | All agents, skills, commands, hooks, configs |
 | CLI | 60 | Brownfield analysis, conflict detection, project detection |
-| Brownfield safety | 36 | Conflict detection, backup, merge strategies, resolution map |
-| E2E pipeline | 51 | Every script executed: phase-runner, gate-manager, worktree-manager, todo-manager, memory-manager, learnings-manager, doc-checker, session-start, auto-checkpoint, validate-scaffold |
-| CI | Node 18, 20, 22 | GitHub Actions — all green |
+| Brownfield safety | 36 | Conflict detection, backup, merge strategies |
+| E2E pipeline | 51 | Every generated script: phase-runner, gate-manager, worktree-manager, todo-manager, memory-manager, learnings-manager, doc-checker, session-start, auto-checkpoint |
 
 ---
 
@@ -264,53 +371,89 @@ fishi mcp add playwright    # Browser testing
 
 ### Coming Soon
 
-#### Sandbox Integration
-Run agents in isolated containers instead of locally. Integration with [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) and [E2B](https://e2b.dev) — each agent gets its own sandboxed environment with YAML-defined security policies. Backend agents get database access, frontend agents don't. No code runs on your local machine.
+<table>
+<tr>
+<td width="50%">
 
-#### Vibe Mode (`/fishi-quickstart`)
-Match the speed of tools like Lovable and Bolt.new — auto-approve gates, skip the wizard, dev agents start immediately, live preview on `:3000` in 2-3 minutes. Ship fast now, add tests and gates later with progressive enhancement.
+#### Sandbox Integration
+Run agents in **isolated containers** instead of locally. Integration with [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) and [E2B](https://e2b.dev) — each agent gets its own sandboxed environment with YAML-defined security policies.
+
+</td>
+<td width="50%">
+
+#### Vibe Mode
+Match the speed of Lovable and Bolt.new — auto-approve gates, dev agents start immediately, **live preview on `:3000` in 2-3 minutes**. Ship fast now, add tests and gates later.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 #### Frontend Quality Engine
-Fix the #1 complaint about AI coding tools: ugly, generic UIs. FISHI will auto-detect or create design token systems (colors, typography, spacing), maintain a component registry (shadcn/ui, Radix), and use a multi-agent design workflow — UI/UX Agent designs, Frontend Agent codes, Brand Guardian validates. No more hardcoded hex colors or inconsistent spacing.
+Auto-detect or create **design token systems**, maintain a component registry (shadcn/ui, Radix), and use a multi-agent design workflow — UI/UX Agent designs, Frontend Agent codes, Brand Guardian validates.
 
-#### Agent Observability Dashboard
-Real-time view of what 18 agents are doing — phase progress, worktree activity, test results, agent status. Single browser tab to monitor your entire AI dev team.
+</td>
+<td width="50%">
+
+#### Agent Observability
+Real-time dashboard showing what 18 agents are doing — phase progress, worktree activity, test results. Single browser tab to monitor your AI dev team.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 #### Domain-Specific Agents
-Pre-loaded knowledge for common project types:
-- **SaaS Architect** — Stripe billing, multi-tenancy, subscription management
-- **Marketplace Architect** — escrow, disputes, vendor management
-- **Mobile-First Architect** — PWA, offline sync, push notifications
-- **AI/ML Architect** — RAG pipelines, embeddings, fine-tuning
+Pre-loaded knowledge: **SaaS** (Stripe, multi-tenancy), **Marketplace** (escrow, disputes), **Mobile** (PWA, offline), **AI/ML** (RAG, embeddings).
+
+</td>
+<td width="50%">
 
 #### Security Scanning Gate
-Automated OWASP/CWE security checks as a gate requirement before deployment. Unlike vibe coding tools where [10% of generated apps have security vulnerabilities](https://uxplanet.org/i-tested-5-ai-coding-tools-so-you-dont-have-to-b229d4b1a324), FISHI catches them before shipping.
+Automated **OWASP/CWE checks** before deployment. Unlike vibe tools where 10% of apps ship with vulnerabilities — FISHI catches them first.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
 
 #### Pattern Marketplace
-Pre-built architectural patterns for common integrations — authentication (Auth0, Clerk, JWT), payments (Stripe, PayPal), email (SendGrid, Resend), analytics (PostHog, Plausible). Select at init, architect injects into design, agents build.
+Pre-built architectural patterns: **Auth** (Auth0, Clerk, JWT) | **Payments** (Stripe, PayPal) | **Email** (SendGrid, Resend) | **Analytics** (PostHog, Plausible)
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## Packages
 
-| Package | Version | Description |
-|---------|---------|-------------|
-| [`@qlucent/fishi`](https://www.npmjs.com/package/@qlucent/fishi) | 0.5.0 | CLI — `npx @qlucent/fishi init` |
-| [`@qlucent/fishi-core`](https://www.npmjs.com/package/@qlucent/fishi-core) | 0.5.0 | Shared templates, types, generators |
-| `fishi` (plugin) | 0.5.0 | Claude Code plugin via marketplace |
+| Package | Version | Install |
+|---------|---------|---------|
+| [`@qlucent/fishi`](https://www.npmjs.com/package/@qlucent/fishi) | ![npm](https://img.shields.io/npm/v/@qlucent/fishi?style=flat-square&color=0066cc) | `npx @qlucent/fishi init` |
+| [`@qlucent/fishi-core`](https://www.npmjs.com/package/@qlucent/fishi-core) | ![npm](https://img.shields.io/npm/v/@qlucent/fishi-core?style=flat-square&color=0066cc) | Shared templates & generators |
+| `fishi` (plugin) | 0.5.0 | `/plugin install fishi@qlucent-fishi` |
 
 ---
 
 ## Requirements
 
-- Node.js >= 18
-- Claude Code CLI installed
-- Git
+- **Node.js** >= 18
+- **Claude Code** CLI installed
+- **Git**
+
+## Contributing
+
+Contributions welcome! Please open an issue first to discuss what you'd like to change.
 
 ## License
 
-MIT
+[MIT](LICENSE)
 
 ---
 
-**Just FISHI.**
+<p align="center">
+  <b>Just FISHI.</b>
+  <br>
+  <sub>Built by <a href="https://github.com/kpkaranam">Qlucent</a></sub>
+</p>
