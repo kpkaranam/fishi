@@ -135,3 +135,5 @@ export type { ConflictMap, ConflictCategory, FileConflict } from './generators/i
 export { createBackup } from './generators/index';
 export type { BackupManifest } from './generators/index';
 export { mergeClaudeMd, mergeClaudeMdTop, mergeSettingsJson, mergeMcpJson, mergeGitignore } from './generators/index';
+export { emitEvent, readMonitorState, getAgentSummary } from './generators/index';
+export type { MonitorState, MonitorEvent, MonitorSummary, DynamicAgent } from './generators/index';
