@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import path from 'path';
 import fs from 'fs';
 import type { CostMode, InitOptions, ProjectType } from '@qlucent/fishi-core';
-import { detectConflicts, createBackup } from '@qlucent/fishi-core';
+import { detectConflicts, createBackup, detectDocker } from '@qlucent/fishi-core';
 import type { FileResolutionMap, ConflictResolution } from '@qlucent/fishi-core';
 import { detectProjectType } from '../analyzers/detector.js';
 import { runBrownfieldAnalysis, type BrownfieldAnalysis } from '../analyzers/brownfield.js';
@@ -90,6 +90,26 @@ export async function initCommand(
   } else {
     // Interactive wizard
     initOptions = await runWizard(options);
+  }
+
+  // ── Sandbox Mode Detection ──────────────────────────────────────
+  const dockerAvailable = detectDocker();
+  let sandboxMode: 'docker' | 'process' = 'process';
+
+  if (options.interactive !== false) {
+    if (dockerAvailable) {
+      const { useSandbox } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'useSandbox',
+        message: 'Docker detected. Use Docker sandbox for agent isolation? (Recommended)',
+        default: true,
+      }]);
+      sandboxMode = useSandbox ? 'docker' : 'process';
+    } else {
+      console.log(chalk.yellow('  Docker not found. Using process-level sandbox (limited isolation).'));
+      console.log(chalk.gray('  Install Docker for full agent isolation: https://docs.docker.com/get-docker/'));
+      console.log('');
+    }
   }
 
   // Step 3: Brownfield analysis (if existing project)
@@ -274,6 +294,23 @@ export async function initCommand(
       fs.writeFileSync(reportPath, report, 'utf-8');
     }
 
+    // Write sandbox configuration
+    const sandboxYaml = `\nsandbox:\n  mode: ${sandboxMode}\n  docker_available: ${dockerAvailable}\n`;
+    const fishiYamlPath = path.join(targetDir, '.fishi', 'fishi.yaml');
+    if (fs.existsSync(fishiYamlPath)) {
+      fs.appendFileSync(fishiYamlPath, sandboxYaml, 'utf-8');
+    }
+
+    // Write sandbox policy
+    const { getSandboxPolicyTemplate, getDockerfileTemplate } = await import('@qlucent/fishi-core');
+    fs.writeFileSync(path.join(targetDir, '.fishi', 'sandbox-policy.yaml'), getSandboxPolicyTemplate(), 'utf-8');
+
+    // Write Dockerfile if docker mode
+    if (sandboxMode === 'docker') {
+      fs.mkdirSync(path.join(targetDir, '.fishi', 'docker'), { recursive: true });
+      fs.writeFileSync(path.join(targetDir, '.fishi', 'docker', 'Dockerfile'), getDockerfileTemplate(), 'utf-8');
+    }
+
     scaffoldSpinner.succeed('FISHI framework scaffolded successfully!');
     console.log('');
     console.log(chalk.bold('  Created:'));
@@ -284,6 +321,7 @@ export async function initCommand(
     console.log(chalk.gray(`  📄 .claude/CLAUDE.md       — Project instructions`));
     console.log(chalk.gray(`  📄 .claude/settings.json   — Hooks & permissions`));
     console.log(chalk.gray(`  📄 .mcp.json               — MCP server config`));
+    console.log(chalk.gray(`  🔒 Sandbox:              ${sandboxMode} mode${sandboxMode === 'docker' ? ' (full isolation)' : ' (limited isolation)'}`));
 
     if (brownfieldAnalysis) {
       console.log(chalk.gray(`  📄 .fishi/memory/brownfield-analysis.md — Codebase analysis report`));

@@ -9,6 +9,7 @@ import { resetCommand } from './commands/reset.js';
 import { validateCommand } from './commands/validate.js';
 import { monitorCommand } from './commands/monitor.js';
 import { dashboardCommand } from './commands/dashboard.js';
+import { sandboxCommand } from './commands/sandbox.js';
 
 const program = new Command();
 
@@ -71,5 +72,11 @@ program
   .description('Agent observability — web dashboard at http://localhost:4269')
   .option('-p, --port <port>', 'Port number', '4269')
   .action(dashboardCommand);
+
+program
+  .command('sandbox')
+  .description('Sandbox status and policy management')
+  .argument('<action>', 'Action: status | policy')
+  .action(sandboxCommand);
 
 program.parse();
