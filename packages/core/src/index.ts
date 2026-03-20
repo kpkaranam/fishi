@@ -97,6 +97,7 @@ export {
   getLearningsManagerScript,
   getDocCheckerScript,
   getMonitorEmitterScript,
+  getFileLockHookScript,
 } from './templates/hooks/index';
 
 // Command templates
@@ -167,3 +168,5 @@ export { runSecurityScan, generateSecurityReport, getScanRules } from './generat
 export type { SecurityFinding, SecurityReport, Severity as SecuritySeverity } from './generators/index';
 export { getPatternCategories, getPatternsByCategory, getPattern, searchPatterns, saveSelectedPatterns, readSelectedPatterns, generatePatternGuide } from './generators/index';
 export type { Pattern, PatternCategory, SelectedPatterns } from './generators/index';
+export { readFileLocks, checkLockConflicts, acquireLocks, releaseLocks, getAgentLocks, getLockSummary } from './generators/index';
+export type { FileLock, LockConflict, LockResult } from './generators/index';
