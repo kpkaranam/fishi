@@ -1,4 +1,4 @@
-import type { InitOptions, ProjectType, ScaffoldResult, BrownfieldAnalysisData, FileResolutionMap } from '@qlucent/fishi-core';
+import type { InitOptions, ProjectType, ScaffoldResult, BrownfieldAnalysisData, FileResolutionMap, ProjectDomain } from '@qlucent/fishi-core';
 import { generateScaffold } from '@qlucent/fishi-core';
 
 interface ScaffoldOptions extends InitOptions {
@@ -8,6 +8,7 @@ interface ScaffoldOptions extends InitOptions {
   resolutions?: FileResolutionMap;
   docsReadmeExists?: boolean;
   rootClaudeMdExists?: boolean;
+  domain?: ProjectDomain;
 }
 
 export async function scaffold(

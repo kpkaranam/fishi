@@ -37,8 +37,8 @@ describe('generateScaffold', () => {
     expect(result).toHaveProperty('hookCount');
     expect(result).toHaveProperty('filesCreated');
 
-    expect(result.agentCount).toBe(18);
-    expect(result.skillCount).toBe(12);
+    expect(result.agentCount).toBe(19);
+    expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
     expect(result.hookCount).toBe(16);
     expect(result.filesCreated).toBeGreaterThan(0);
@@ -354,7 +354,7 @@ describe('generateScaffold', () => {
         ...defaultOptions,
         projectType: 'brownfield',
       });
-      expect(result.agentCount).toBe(18);
+      expect(result.agentCount).toBe(19);
     });
 
     it('handles hybrid project type', async () => {
@@ -363,7 +363,7 @@ describe('generateScaffold', () => {
         ...defaultOptions,
         projectType: 'hybrid',
       });
-      expect(result.agentCount).toBe(18);
+      expect(result.agentCount).toBe(19);
     });
 
     it('handles economy cost mode', async () => {
@@ -496,8 +496,8 @@ describe('generateScaffold — brownfield with resolutions', () => {
     const dir = createTempDir();
     const result = await generateScaffold(dir, defaultOptions);
 
-    expect(result.agentCount).toBe(18);
-    expect(result.skillCount).toBe(12);
+    expect(result.agentCount).toBe(19);
+    expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
     expect(result.filesCreated).toBeGreaterThan(0);
     expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(true);

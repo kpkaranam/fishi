@@ -3,8 +3,8 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import path from 'path';
 import fs from 'fs';
-import type { CostMode, InitOptions, ProjectType } from '@qlucent/fishi-core';
-import { detectConflicts, createBackup, detectDocker } from '@qlucent/fishi-core';
+import type { CostMode, InitOptions, ProjectType, ProjectDomain } from '@qlucent/fishi-core';
+import { detectConflicts, createBackup, detectDocker, getAvailableDomains, getDomainConfigYaml } from '@qlucent/fishi-core';
 import type { FileResolutionMap, ConflictResolution } from '@qlucent/fishi-core';
 import { detectProjectType } from '../analyzers/detector.js';
 import { runBrownfieldAnalysis, type BrownfieldAnalysis } from '../analyzers/brownfield.js';
@@ -180,6 +180,21 @@ export async function initCommand(
     }
   }
 
+  // ── Domain Selection ────────────────────────────────────────────
+  let selectedDomain: ProjectDomain = 'general';
+
+  if (options.interactive !== false) {
+    const domains = getAvailableDomains();
+    const { domain } = await inquirer.prompt([{
+      type: 'list',
+      name: 'domain',
+      message: 'What type of application are you building?',
+      choices: domains,
+      default: 'general',
+    }]);
+    selectedDomain = domain;
+  }
+
   // ── Conflict Detection ──────────────────────────────────────────
   const conflictResult = detectConflicts(targetDir);
   let resolutions: FileResolutionMap | undefined;
@@ -281,6 +296,7 @@ export async function initCommand(
       resolutions,
       docsReadmeExists: conflictResult?.docsReadmeExists,
       rootClaudeMdExists: conflictResult?.rootClaudeMdExists,
+      domain: selectedDomain,
     });
 
     // Write brownfield report if analysis was performed
@@ -299,6 +315,14 @@ export async function initCommand(
     const fishiYamlPath = path.join(targetDir, '.fishi', 'fishi.yaml');
     if (fs.existsSync(fishiYamlPath)) {
       fs.appendFileSync(fishiYamlPath, sandboxYaml, 'utf-8');
+    }
+
+    // Write domain config
+    if (selectedDomain !== 'general') {
+      const fishiYamlPath2 = path.join(targetDir, '.fishi', 'fishi.yaml');
+      if (fs.existsSync(fishiYamlPath2)) {
+        fs.appendFileSync(fishiYamlPath2, getDomainConfigYaml(selectedDomain), 'utf-8');
+      }
     }
 
     // Write sandbox policy
