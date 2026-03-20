@@ -165,3 +165,5 @@ export { getSoulMdTemplate } from './templates/configs/soul-md';
 export { getAgentsMdTemplate } from './templates/configs/agents-md';
 export { runSecurityScan, generateSecurityReport, getScanRules } from './generators/index';
 export type { SecurityFinding, SecurityReport, Severity as SecuritySeverity } from './generators/index';
+export { getPatternCategories, getPatternsByCategory, getPattern, searchPatterns, saveSelectedPatterns, readSelectedPatterns, generatePatternGuide } from './generators/index';
+export type { Pattern, PatternCategory, SelectedPatterns } from './generators/index';

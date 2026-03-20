@@ -14,6 +14,7 @@ import { quickstartCommand } from './commands/quickstart.js';
 import { previewCommand } from './commands/preview.js';
 import { designCommand } from './commands/design.js';
 import { securityCommand } from './commands/security.js';
+import { patternsCommand } from './commands/patterns.js';
 
 const program = new Command();
 
@@ -115,5 +116,14 @@ program
   .option('-o, --output <path>', 'Save report to file')
   .option('--json', 'Output as JSON')
   .action(securityCommand);
+
+program
+  .command('patterns')
+  .description('Pattern marketplace — browse, search, select integration blueprints')
+  .argument('<action>', 'Action: list | search | info | select | selected')
+  .option('-q, --query <query>', 'Search query or pattern ID(s)')
+  .option('-c, --category <category>', 'Filter by category')
+  .option('-o, --output <path>', 'Save guide to file')
+  .action(patternsCommand);
 
 program.parse();
