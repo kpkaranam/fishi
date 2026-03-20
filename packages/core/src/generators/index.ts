@@ -19,3 +19,5 @@ export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock
 export type { AgentRole, AgentPermissionSet } from './agent-permissions';
 export { runSecurityScan, generateSecurityReport, getScanRules } from './security-scanner';
 export type { SecurityFinding, SecurityReport, Severity } from './security-scanner';
+export { getPatternCategories, getPatternsByCategory, getPattern, searchPatterns, saveSelectedPatterns, readSelectedPatterns, generatePatternGuide } from './pattern-marketplace';
+export type { Pattern, PatternCategory, SelectedPatterns } from './pattern-marketplace';
