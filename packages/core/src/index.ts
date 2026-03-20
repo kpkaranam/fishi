@@ -159,3 +159,7 @@ export type { ProjectDomain, DomainConfig } from './generators/index';
 export { getSandboxPolicyTemplate } from './templates/configs/sandbox-policy';
 export { getDockerfileTemplate } from './templates/docker/Dockerfile';
 export { getDashboardHtml } from './templates/dashboard/index-html';
+export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock } from './generators/index';
+export type { AgentRole as AgentPermissionRole, AgentPermissionSet } from './generators/index';
+export { getSoulMdTemplate } from './templates/configs/soul-md';
+export { getAgentsMdTemplate } from './templates/configs/agents-md';

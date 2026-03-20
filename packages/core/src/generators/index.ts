@@ -15,3 +15,5 @@ export { detectDesignTokens, generateDefaultTokens, detectComponentRegistry, run
 export type { DesignTokens, ComponentEntry, ComponentRegistry, BrandGuardianIssue, BrandGuardianReport } from './design-system';
 export { getAvailableDomains, readDomainConfig, getDomainConfigYaml, DOMAIN_INFO } from './domain-manager';
 export type { ProjectDomain, DomainConfig } from './domain-manager';
+export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock } from './agent-permissions';
+export type { AgentRole, AgentPermissionSet } from './agent-permissions';

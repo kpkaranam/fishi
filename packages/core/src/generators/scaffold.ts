@@ -92,6 +92,8 @@ import { getProjectYamlTemplate } from '../templates/configs/project-yaml.js';
 import { getAgentRegistryTemplate } from '../templates/configs/agent-registry.js';
 import { getGitignoreAdditions } from '../templates/configs/gitignore-additions.js';
 import { getModelRoutingReference } from '../templates/configs/model-routing.js';
+import { getSoulMdTemplate } from '../templates/configs/soul-md.js';
+import { getAgentsMdTemplate } from '../templates/configs/agents-md.js';
 
 export type ConflictResolution = 'skip' | 'merge' | 'replace';
 
@@ -185,6 +187,7 @@ export async function generateScaffold(
     '.fishi/todos/agents',
     '.fishi/learnings/by-domain',
     '.fishi/learnings/by-agent',
+    '.fishi/archive',
     '.fishi/research',
     '.trees',
   ];
@@ -295,6 +298,10 @@ export async function generateScaffold(
   await write('.claude/commands/fishi-reset.md', getResetCommand(), 'commands');
   await write('.claude/commands/fishi-prd.md', getPrdCommand(), 'commands');
   const commandCount = 8;
+
+  // ── Safety Layer ────────────────────────────────────────────────
+  await write('SOUL.md', getSoulMdTemplate());
+  await write('AGENTS.md', getAgentsMdTemplate());
 
   // ── Config Files ──────────────────────────────────────────────────
   await write('.fishi/fishi.yaml', getFishiYamlTemplate({
