@@ -163,3 +163,5 @@ export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock
 export type { AgentRole as AgentPermissionRole, AgentPermissionSet } from './generators/index';
 export { getSoulMdTemplate } from './templates/configs/soul-md';
 export { getAgentsMdTemplate } from './templates/configs/agents-md';
+export { runSecurityScan, generateSecurityReport, getScanRules } from './generators/index';
+export type { SecurityFinding, SecurityReport, Severity as SecuritySeverity } from './generators/index';
