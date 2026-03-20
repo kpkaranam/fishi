@@ -13,3 +13,5 @@ export { detectDevServer, startDevServer, getVibeModeConfig } from './preview-se
 export type { DevServerConfig } from './preview-server';
 export { detectDesignTokens, generateDefaultTokens, detectComponentRegistry, runBrandGuardian, generateDesignSystemConfig } from './design-system';
 export type { DesignTokens, ComponentEntry, ComponentRegistry, BrandGuardianIssue, BrandGuardianReport } from './design-system';
+export { getAvailableDomains, readDomainConfig, getDomainConfigYaml, DOMAIN_INFO } from './domain-manager';
+export type { ProjectDomain, DomainConfig } from './domain-manager';

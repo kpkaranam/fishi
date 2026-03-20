@@ -53,6 +53,15 @@ export {
   marketingAgentTemplate,
 } from './templates/agents/index';
 
+// Domain agent templates
+export {
+  getSaasArchitectTemplate,
+  getMarketplaceArchitectTemplate,
+  getMobileArchitectTemplate,
+  getAimlArchitectTemplate,
+  getDeepResearchAgentTemplate,
+} from './templates/agents/domains/index';
+
 // Skill templates
 export {
   getBrainstormingSkill,
@@ -67,6 +76,7 @@ export {
   getBrownfieldDiscoverySkill,
   getAdaptiveTaskGraphSkill,
   getDocumentationSkill,
+  getDeepResearchSkill,
 } from './templates/skills/index';
 
 // Hook templates
@@ -144,6 +154,8 @@ export { detectDevServer, startDevServer, getVibeModeConfig } from './generators
 export type { DevServerConfig } from './generators/index';
 export { detectDesignTokens, generateDefaultTokens, detectComponentRegistry, runBrandGuardian, generateDesignSystemConfig } from './generators/index';
 export type { DesignTokens, ComponentEntry, ComponentRegistry, BrandGuardianIssue, BrandGuardianReport } from './generators/index';
+export { getAvailableDomains, readDomainConfig, getDomainConfigYaml, DOMAIN_INFO } from './generators/index';
+export type { ProjectDomain, DomainConfig } from './generators/index';
 export { getSandboxPolicyTemplate } from './templates/configs/sandbox-policy';
 export { getDockerfileTemplate } from './templates/docker/Dockerfile';
 export { getDashboardHtml } from './templates/dashboard/index-html';

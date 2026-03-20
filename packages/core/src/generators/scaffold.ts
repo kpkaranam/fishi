@@ -44,6 +44,15 @@ import { getPrdSkill } from '../templates/skills/prd.js';
 import { getBrownfieldDiscoverySkill } from '../templates/skills/brownfield-discovery.js';
 import { getAdaptiveTaskGraphSkill } from '../templates/skills/adaptive-taskgraph.js';
 import { getDocumentationSkill } from '../templates/skills/documentation.js';
+import { getDeepResearchSkill } from '../templates/skills/deep-research.js';
+
+// Domain agent templates
+import { getSaasArchitectTemplate } from '../templates/agents/domains/saas-architect.js';
+import { getMarketplaceArchitectTemplate } from '../templates/agents/domains/marketplace-architect.js';
+import { getMobileArchitectTemplate } from '../templates/agents/domains/mobile-architect.js';
+import { getAimlArchitectTemplate } from '../templates/agents/domains/aiml-architect.js';
+import { getDeepResearchAgentTemplate } from '../templates/agents/domains/deep-research.js';
+import type { ProjectDomain } from './domain-manager.js';
 
 // Hook templates
 import { getSessionStartHook } from '../templates/hooks/session-start.js';
@@ -98,6 +107,7 @@ export interface ScaffoldOptions extends InitOptions {
   resolutions?: FileResolutionMap;
   docsReadmeExists?: boolean;
   rootClaudeMdExists?: boolean;
+  domain?: ProjectDomain;
 }
 
 export interface ScaffoldResult {
@@ -157,6 +167,7 @@ export async function generateScaffold(
     '.claude/skills/brownfield-discovery',
     '.claude/skills/adaptive-taskgraph',
     '.claude/skills/documentation',
+    '.claude/skills/deep-research',
     '.claude/commands',
     'docs',
     '.fishi/plans/prd',
@@ -174,6 +185,7 @@ export async function generateScaffold(
     '.fishi/todos/agents',
     '.fishi/learnings/by-domain',
     '.fishi/learnings/by-agent',
+    '.fishi/research',
     '.trees',
   ];
   for (const dir of dirs) {
@@ -199,7 +211,26 @@ export async function generateScaffold(
   await write('.claude/agents/docs-agent.md', docsAgentTemplate(ctx), 'agents');
   await write('.claude/agents/writing-agent.md', writingAgentTemplate(ctx), 'agents');
   await write('.claude/agents/marketing-agent.md', marketingAgentTemplate(ctx), 'agents');
-  const agentCount = 18;
+  let agentCount = 18;
+
+  // ── Deep Research Agent (always included) ────────────────────────
+  await write('.claude/agents/deep-research-agent.md', getDeepResearchAgentTemplate(), 'agents');
+  agentCount++;
+
+  // ── Domain-Specific Agent (if domain selected) ──────────────────
+  if (options.domain && options.domain !== 'general') {
+    const domainTemplates: Record<string, () => string> = {
+      saas: getSaasArchitectTemplate,
+      marketplace: getMarketplaceArchitectTemplate,
+      mobile: getMobileArchitectTemplate,
+      aiml: getAimlArchitectTemplate,
+    };
+    const template = domainTemplates[options.domain];
+    if (template) {
+      await write(`.claude/agents/${options.domain}-architect.md`, template(), 'agents');
+      agentCount++;
+    }
+  }
 
   // ── Agent Factory Templates ───────────────────────────────────────
   await write('.fishi/agent-factory/agent-template.md', getAgentFactoryTemplate());
@@ -218,7 +249,10 @@ export async function generateScaffold(
   await write('.claude/skills/brownfield-discovery/SKILL.md', getBrownfieldDiscoverySkill(), 'skills');
   await write('.claude/skills/adaptive-taskgraph/SKILL.md', getAdaptiveTaskGraphSkill(), 'skills');
   await write('.claude/skills/documentation/SKILL.md', getDocumentationSkill(), 'skills');
-  const skillCount = 12;
+
+  // ── Deep Research Skill ──────────────────────────────────────────
+  await write('.claude/skills/deep-research/SKILL.md', getDeepResearchSkill(), 'skills');
+  const skillCount = 13;
 
   // ── Hooks (7 .mjs scripts) ───────────────────────────────────────
   await write('.fishi/scripts/session-start.mjs', getSessionStartHook());

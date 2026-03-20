@@ -10,3 +10,4 @@ export { getPrdSkill } from './prd.js';
 export { getBrownfieldDiscoverySkill } from './brownfield-discovery.js';
 export { getAdaptiveTaskGraphSkill } from './adaptive-taskgraph.js';
 export { getDocumentationSkill } from './documentation.js';
+export { getDeepResearchSkill } from './deep-research.js';
