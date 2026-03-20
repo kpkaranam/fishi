@@ -16,3 +16,6 @@ export { getAgentRegistryTemplate } from './agent-registry';
 export { getGitignoreAdditions } from './gitignore-additions';
 
 export { getModelRoutingReference } from './model-routing';
+
+export { getSoulMdTemplate } from './soul-md';
+export { getAgentsMdTemplate } from './agents-md';
