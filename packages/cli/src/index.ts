@@ -23,7 +23,7 @@ program
       ' — Your AI Dev Team That Actually Ships\n' +
       '   Autonomous agent framework for Claude Code'
   )
-  .version('0.10.0');
+  .version('0.11.0');
 
 program
   .command('init')
