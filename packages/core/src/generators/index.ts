@@ -9,3 +9,5 @@ export { emitEvent, readMonitorState, getAgentSummary } from './monitor';
 export type { MonitorState, MonitorEvent, MonitorSummary, DynamicAgent } from './monitor';
 export { detectDocker, readSandboxConfig, readSandboxPolicy, buildSandboxEnv, runInProcessSandbox, runInDockerSandbox, runInSandbox } from './sandbox';
 export type { SandboxMode, SandboxConfig, SandboxPolicy, SandboxRunResult } from './sandbox';
+export { detectDevServer, startDevServer, getVibeModeConfig } from './preview-server';
+export type { DevServerConfig } from './preview-server';
