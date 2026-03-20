@@ -10,6 +10,8 @@ import { validateCommand } from './commands/validate.js';
 import { monitorCommand } from './commands/monitor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { sandboxCommand } from './commands/sandbox.js';
+import { quickstartCommand } from './commands/quickstart.js';
+import { previewCommand } from './commands/preview.js';
 
 const program = new Command();
 
@@ -78,5 +80,23 @@ program
   .description('Sandbox status and policy management')
   .argument('<action>', 'Action: status | policy')
   .action(sandboxCommand);
+
+program
+  .command('quickstart')
+  .description('Vibe mode — skip gates, scaffold + start dev server immediately')
+  .argument('[description]', 'What are you building?')
+  .option('-l, --language <lang>', 'Primary language')
+  .option('-f, --framework <framework>', 'Framework')
+  .option('-c, --cost-mode <mode>', 'Cost mode', 'balanced')
+  .option('--dev-cmd <cmd>', 'Custom dev server command')
+  .option('--port <port>', 'Dev server port')
+  .action(quickstartCommand);
+
+program
+  .command('preview')
+  .description('Start live preview dev server')
+  .option('--dev-cmd <cmd>', 'Custom dev server command')
+  .option('--port <port>', 'Dev server port')
+  .action(previewCommand);
 
 program.parse();

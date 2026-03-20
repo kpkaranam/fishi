@@ -140,6 +140,8 @@ export { emitEvent, readMonitorState, getAgentSummary } from './generators/index
 export type { MonitorState, MonitorEvent, MonitorSummary, DynamicAgent } from './generators/index';
 export { detectDocker, readSandboxConfig, readSandboxPolicy, buildSandboxEnv, runInProcessSandbox, runInDockerSandbox, runInSandbox } from './generators/index';
 export type { SandboxMode, SandboxConfig, SandboxPolicy, SandboxRunResult } from './generators/index';
+export { detectDevServer, startDevServer, getVibeModeConfig } from './generators/index';
+export type { DevServerConfig } from './generators/index';
 export { getSandboxPolicyTemplate } from './templates/configs/sandbox-policy';
 export { getDockerfileTemplate } from './templates/docker/Dockerfile';
 export { getDashboardHtml } from './templates/dashboard/index-html';
