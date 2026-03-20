@@ -11,3 +11,5 @@ export { detectDocker, readSandboxConfig, readSandboxPolicy, buildSandboxEnv, ru
 export type { SandboxMode, SandboxConfig, SandboxPolicy, SandboxRunResult } from './sandbox';
 export { detectDevServer, startDevServer, getVibeModeConfig } from './preview-server';
 export type { DevServerConfig } from './preview-server';
+export { detectDesignTokens, generateDefaultTokens, detectComponentRegistry, runBrandGuardian, generateDesignSystemConfig } from './design-system';
+export type { DesignTokens, ComponentEntry, ComponentRegistry, BrandGuardianIssue, BrandGuardianReport } from './design-system';

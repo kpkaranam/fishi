@@ -142,6 +142,8 @@ export { detectDocker, readSandboxConfig, readSandboxPolicy, buildSandboxEnv, ru
 export type { SandboxMode, SandboxConfig, SandboxPolicy, SandboxRunResult } from './generators/index';
 export { detectDevServer, startDevServer, getVibeModeConfig } from './generators/index';
 export type { DevServerConfig } from './generators/index';
+export { detectDesignTokens, generateDefaultTokens, detectComponentRegistry, runBrandGuardian, generateDesignSystemConfig } from './generators/index';
+export type { DesignTokens, ComponentEntry, ComponentRegistry, BrandGuardianIssue, BrandGuardianReport } from './generators/index';
 export { getSandboxPolicyTemplate } from './templates/configs/sandbox-policy';
 export { getDockerfileTemplate } from './templates/docker/Dockerfile';
 export { getDashboardHtml } from './templates/dashboard/index-html';

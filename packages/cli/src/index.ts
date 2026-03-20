@@ -12,6 +12,7 @@ import { dashboardCommand } from './commands/dashboard.js';
 import { sandboxCommand } from './commands/sandbox.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { previewCommand } from './commands/preview.js';
+import { designCommand } from './commands/design.js';
 
 const program = new Command();
 
@@ -98,5 +99,12 @@ program
   .option('--dev-cmd <cmd>', 'Custom dev server command')
   .option('--port <port>', 'Dev server port')
   .action(previewCommand);
+
+program
+  .command('design')
+  .description('Design system — detect tokens, init design system, validate with Brand Guardian')
+  .argument('<action>', 'Action: detect | init | validate')
+  .option('-o, --output <path>', 'Output path for design config')
+  .action(designCommand);
 
 program.parse();
