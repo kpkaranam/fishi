@@ -17,3 +17,5 @@ export { getAvailableDomains, readDomainConfig, getDomainConfigYaml, DOMAIN_INFO
 export type { ProjectDomain, DomainConfig } from './domain-manager';
 export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock } from './agent-permissions';
 export type { AgentRole, AgentPermissionSet } from './agent-permissions';
+export { runSecurityScan, generateSecurityReport, getScanRules } from './security-scanner';
+export type { SecurityFinding, SecurityReport, Severity } from './security-scanner';

@@ -13,6 +13,7 @@ import { sandboxCommand } from './commands/sandbox.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { previewCommand } from './commands/preview.js';
 import { designCommand } from './commands/design.js';
+import { securityCommand } from './commands/security.js';
 
 const program = new Command();
 
@@ -106,5 +107,13 @@ program
   .argument('<action>', 'Action: detect | init | validate')
   .option('-o, --output <path>', 'Output path for design config')
   .action(designCommand);
+
+program
+  .command('security')
+  .description('Security scanner — native SAST + OWASP vulnerability detection')
+  .argument('<action>', 'Action: scan | rules')
+  .option('-o, --output <path>', 'Save report to file')
+  .option('--json', 'Output as JSON')
+  .action(securityCommand);
 
 program.parse();
