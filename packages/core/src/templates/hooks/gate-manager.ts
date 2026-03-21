@@ -147,7 +147,7 @@ function createGate(phase, description) {
   saveGates(data);
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.created', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.created', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'pending', action: 'created' }));
 }
@@ -227,7 +227,7 @@ function approveGate(phase) {
   updateProjectPhase(phase, 'approved');
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.approved', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.approved', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'approved', action: 'approved', docs_checked: gate.docs_checked }));
 }
@@ -247,7 +247,7 @@ function rejectGate(phase, reason) {
   saveGates(data);
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.rejected', agent: 'master-orchestrator', data: { phase, reason: gate.reason } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.rejected', agent: 'master-orchestrator', data: { phase, reason: gate.reason } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'rejected', reason: gate.reason, action: 'rejected' }));
 }
@@ -268,7 +268,7 @@ function skipGate(phase) {
   updateProjectPhase(phase, 'skipped');
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.skipped', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.skipped', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'skipped', action: 'skipped' }));
 }

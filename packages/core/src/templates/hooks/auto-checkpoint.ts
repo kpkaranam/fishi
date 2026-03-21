@@ -239,7 +239,7 @@ try {
 
   // Emit monitoring event
   try {
-    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
   } catch {}
 } catch (err) {

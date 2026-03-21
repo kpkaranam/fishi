@@ -183,7 +183,7 @@ try {
 
   // Emit monitoring event
   try {
-    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'agent.completed', agent: agentName || 'unknown', data: { status: status || 'unknown', filesChanged: parsed.filesChanged ? parsed.filesChanged.length : 0, summary: summary || '', taskId: taskId || '' } });
   } catch {}
 } catch (err) {

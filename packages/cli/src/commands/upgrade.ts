@@ -15,7 +15,7 @@ import {
   getWorktreeManagerScript,
 } from '@qlucent/fishi-core';
 
-const CURRENT_VERSION = '0.14.4';
+const CURRENT_VERSION = '0.15.1';
 
 /**
  * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }

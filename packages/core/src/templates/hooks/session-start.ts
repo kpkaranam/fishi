@@ -184,7 +184,7 @@ try {
 
   // Emit monitoring event
   try {
-    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'session.started', agent: 'master-orchestrator', data: { phase, sprint, projectName, taskCounts } });
   } catch {}
 } catch (err) {

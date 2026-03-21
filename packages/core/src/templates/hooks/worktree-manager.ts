@@ -185,7 +185,7 @@ function cmdCreate() {
   appendWorktreeEntry(agentSlug, taskSlug, coordinatorSlug, branch, treePath);
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => {}); } catch {}
 
   out({
     worktree: treePath,
@@ -353,7 +353,7 @@ function cmdMerge() {
   }
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {}
 
   out({
     merged: branch,
@@ -410,7 +410,7 @@ function cmdCleanup() {
   removeWorktreeEntry(worktreeName);
 
   // Emit monitoring event
-  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => {}); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => {}); } catch {}
 
   out({
     removed: treePath,
