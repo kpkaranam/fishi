@@ -1,6 +1,6 @@
 {
   "name": "@qlucent/fishi",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "FISHI — Your AI Dev Team That Actually Ships. Autonomous agent framework for Claude Code.",
   "license": "MIT",
   "type": "module",
