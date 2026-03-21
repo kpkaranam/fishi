@@ -82,7 +82,7 @@ describe('Config Templates', () => {
       const sessionStartHooks = parsed.hooks.SessionStart;
       expect(sessionStartHooks).toBeInstanceOf(Array);
       expect(sessionStartHooks.length).toBeGreaterThan(0);
-      expect(sessionStartHooks[0].command).toContain('session-start');
+      expect(sessionStartHooks[0].hooks[0].command).toContain('session-start');
     });
   });
 

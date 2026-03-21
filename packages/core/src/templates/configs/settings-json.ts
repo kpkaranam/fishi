@@ -4,31 +4,56 @@ export function getSettingsJsonTemplate(): string {
       SessionStart: [
         {
           matcher: "",
-          command: "node .fishi/scripts/session-start.mjs",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/session-start.mjs",
+            },
+          ],
         },
       ],
       Stop: [
         {
           matcher: "",
-          command: "node .fishi/scripts/auto-checkpoint.mjs",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/auto-checkpoint.mjs",
+            },
+          ],
         },
       ],
       SubagentStop: [
         {
           matcher: "",
-          command: "node .fishi/scripts/auto-checkpoint.mjs",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/auto-checkpoint.mjs",
+            },
+          ],
         },
       ],
       PreToolUse: [
         {
           matcher: "Bash",
-          command: "node .fishi/scripts/safety-check.mjs",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/safety-check.mjs",
+            },
+          ],
         },
       ],
       PostToolUse: [
         {
           matcher: "Write|Edit",
-          command: "node .fishi/scripts/post-edit.mjs",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/post-edit.mjs",
+            },
+          ],
         },
       ],
     },
@@ -143,9 +168,6 @@ export function getSettingsJsonTemplate(): string {
         "Bash(nmap *)",
         "Bash(netcat *)",
         "Bash(nc -l *)",
-
-        // Fork bombs and dangerous patterns
-        "Bash(:(){ :|:& };:)",
       ],
     },
   };
