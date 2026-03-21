@@ -1,38 +1,50 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+name: Bug Report
+about: Report a bug in FISHI
+title: '[BUG] '
+labels: bug
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Description
+A clear description of the bug.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## Steps to Reproduce
+1. Run `fishi init ...` or `fishi quickstart ...`
+2. ...
+3. See error
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected Behavior
+What you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## Actual Behavior
+What actually happened. Include error messages if any.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Environment
+- **OS:** [e.g., Windows 11, macOS 14, Ubuntu 22.04]
+- **Node.js:** [e.g., 20.11.1] (run `node -v`)
+- **FISHI:** [e.g., 0.14.0] (run `fishi --version`)
+- **Claude Code:** [e.g., 1.x]
+- **Docker:** [installed/not installed]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+## Project Type
+- [ ] Greenfield (new project)
+- [ ] Brownfield (existing project)
 
-**Additional context**
-Add any other context about the problem here.
+## FISHI Command Used
+```bash
+# The exact command that caused the issue
+```
+
+## Logs
+<details>
+<summary>Error output</summary>
+
+```
+Paste error logs here
+```
+
+</details>
+
+## Additional Context
+Any other relevant information.

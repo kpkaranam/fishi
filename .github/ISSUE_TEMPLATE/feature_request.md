@@ -1,20 +1,32 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: ''
-labels: ''
+name: Feature Request
+about: Suggest a new feature for FISHI
+title: '[FEATURE] '
+labels: enhancement
 assignees: ''
-
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Problem
+What problem does this feature solve? What's frustrating about the current behavior?
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+## Proposed Solution
+Describe what you'd like FISHI to do.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Use Case
+How would you use this feature? Which part of the pipeline does it affect?
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+- [ ] Init / Scaffolding
+- [ ] Planning / PRD
+- [ ] Architecture
+- [ ] Development (agents)
+- [ ] Testing / Security
+- [ ] Deployment
+- [ ] Observability / Monitoring
+- [ ] CLI / Commands
+- [ ] Other
+
+## Alternatives Considered
+Any other approaches you've thought about.
+
+## Additional Context
+Screenshots, links, or examples from other tools.
