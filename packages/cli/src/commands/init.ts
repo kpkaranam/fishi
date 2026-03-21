@@ -106,8 +106,43 @@ export async function initCommand(
       }]);
       sandboxMode = useSandbox ? 'docker' : 'process';
     } else {
-      console.log(chalk.yellow('  Docker not found. Using process-level sandbox (limited isolation).'));
-      console.log(chalk.gray('  Install Docker for full agent isolation: https://docs.docker.com/get-docker/'));
+      console.log(chalk.yellow('  Docker not found.'));
+      console.log(chalk.gray('  Docker provides full agent isolation (recommended for security).'));
+      console.log('');
+
+      const { installDocker } = await inquirer.prompt([{
+        type: 'list',
+        name: 'installDocker',
+        message: 'How would you like to proceed?',
+        choices: [
+          { name: 'Install Docker (opens install page — recommended)', value: 'install' },
+          { name: 'Continue without Docker (process-level isolation only)', value: 'skip' },
+        ],
+        default: 'install',
+      }]);
+
+      if (installDocker === 'install') {
+        const dockerUrl = 'https://docs.docker.com/get-docker/';
+        console.log('');
+        console.log(chalk.cyan(`  Opening: ${dockerUrl}`));
+        console.log(chalk.gray('  Install Docker, then run `fishi init` again.'));
+        console.log('');
+
+        // Try to open browser
+        try {
+          const { execSync: execSyncOpen } = await import('child_process');
+          const platform = process.platform;
+          if (platform === 'win32') execSyncOpen(`start ${dockerUrl}`, { stdio: 'ignore' });
+          else if (platform === 'darwin') execSyncOpen(`open ${dockerUrl}`, { stdio: 'ignore' });
+          else execSyncOpen(`xdg-open ${dockerUrl}`, { stdio: 'ignore' });
+        } catch {
+          console.log(chalk.gray(`  Visit: ${dockerUrl}`));
+        }
+
+        return;
+      }
+
+      console.log(chalk.gray('  Continuing with process-level sandbox (limited isolation).'));
       console.log('');
     }
   }
