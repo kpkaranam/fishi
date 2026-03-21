@@ -21,3 +21,5 @@ export { runSecurityScan, generateSecurityReport, getScanRules } from './securit
 export type { SecurityFinding, SecurityReport, Severity } from './security-scanner';
 export { getPatternCategories, getPatternsByCategory, getPattern, searchPatterns, saveSelectedPatterns, readSelectedPatterns, generatePatternGuide } from './pattern-marketplace';
 export type { Pattern, PatternCategory, SelectedPatterns } from './pattern-marketplace';
+export { readFileLocks, checkLockConflicts, acquireLocks, releaseLocks, getAgentLocks, getLockSummary } from './file-lock-manager';
+export type { FileLock, LockConflict, LockResult } from './file-lock-manager';

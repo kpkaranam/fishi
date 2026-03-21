@@ -71,6 +71,7 @@ import { getMemoryManagerScript } from '../templates/hooks/memory-manager.js';
 import { getLearningsManagerScript } from '../templates/hooks/learnings-manager.js';
 import { getDocCheckerScript } from '../templates/hooks/doc-checker.js';
 import { getMonitorEmitterScript } from '../templates/hooks/monitor-emitter.js';
+import { getFileLockHookScript } from '../templates/hooks/file-lock-hook.js';
 
 // Command templates
 import { getInitCommand } from '../templates/commands/init-command.js';
@@ -274,7 +275,8 @@ export async function generateScaffold(
   await write('.fishi/scripts/learnings-manager.mjs', getLearningsManagerScript());
   await write('.fishi/scripts/doc-checker.mjs', getDocCheckerScript());
   await write('.fishi/scripts/monitor-emitter.mjs', getMonitorEmitterScript());
-  const hookCount = 16;
+  await write('.fishi/scripts/file-lock-hook.mjs', getFileLockHookScript());
+  const hookCount = 17;
 
   // ── Initial TODO Files ─────────────────────────────────────────────
   const todoTemplate = (name: string) => `# TODO — ${name}\n\n## Active\n\n## Completed\n`;
@@ -369,6 +371,7 @@ export async function generateScaffold(
     projectType: options.projectType,
   }));
   await write('.fishi/state/agent-registry.yaml', getAgentRegistryTemplate());
+  await write('.fishi/state/file-locks.yaml', 'locks: []\n');
   await write('.fishi/state/task-graph.yaml', 'tasks: []\ndependencies: []\n');
   await write('.fishi/state/gates.yaml', 'gates: []\n');
   await write('.fishi/state/monitor.json', JSON.stringify({
