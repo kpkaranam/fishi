@@ -18,7 +18,7 @@
   <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
   <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/agents-22+-purple?style=flat-square" alt="22+ agents">
-  <img src="https://img.shields.io/badge/tests-609-brightgreen?style=flat-square" alt="609 tests">
+  <img src="https://img.shields.io/badge/tests-609+-brightgreen?style=flat-square" alt="609+ tests">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
 </p>
 
@@ -651,6 +651,20 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.15.0</b> — Monitoring Events + Docker Auto-Install + Upgrade</summary>
+
+- **All hooks emit monitoring events** — session.started, agent.completed, checkpoint.created, gate.*, worktree.* now written to monitor.json ([#19](https://github.com/kpkaranam/fishi/issues/19))
+- **`fishi upgrade` command** — patches existing projects: fixes hooks format, regenerates scripts, creates missing files
+- **Docker auto-install** — detects OS, installs via winget/brew/apt/dnf/yum, waits for Docker to start ([#18](https://github.com/kpkaranam/fishi/issues/18))
+- **settings.json hooks format fixed** — nested `{ matcher, hooks: [{ type, command }] }` schema ([#16](https://github.com/kpkaranam/fishi/issues/16))
+- **npm/yarn allowed** — removed overly broad deny rules that blocked legitimate commands ([#17](https://github.com/kpkaranam/fishi/issues/17))
+- **New tagline** — "AI-Powered Software Delivery Pipeline with Governance" ([#20](https://github.com/kpkaranam/fishi/issues/20))
+- **Strategic polish** — comparison table, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue templates
+- 609 tests
+
+</details>
+
+<details>
 <summary><b>v0.14.0</b> — Worktree Conflict Prevention</summary>
 
 - **File lock registry** — coordinators lock files before assigning tasks
