@@ -184,6 +184,9 @@ function cmdCreate() {
   // Update agent registry
   appendWorktreeEntry(agentSlug, taskSlug, coordinatorSlug, branch, treePath);
 
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => {}); } catch {}
+
   out({
     worktree: treePath,
     branch,
@@ -349,6 +352,9 @@ function cmdMerge() {
     fail(\`Merge failed: \${err.message}\`);
   }
 
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {}
+
   out({
     merged: branch,
     into: targetBranch,
@@ -402,6 +408,9 @@ function cmdCleanup() {
 
   // Update registry
   removeWorktreeEntry(worktreeName);
+
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => {}); } catch {}
 
   out({
     removed: treePath,

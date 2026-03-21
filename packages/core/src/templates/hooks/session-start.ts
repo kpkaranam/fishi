@@ -181,6 +181,12 @@ try {
   if (contextSummary) {
     console.log(\`Context: \${contextSummary}\`);
   }
+
+  // Emit monitoring event
+  try {
+    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    emitMonitorEvent(projectRoot, { type: 'session.started', agent: 'master-orchestrator', data: { phase, sprint, projectName, taskCounts } });
+  } catch {}
 } catch (err) {
   console.error(\`[FISHI] Session start hook error: \${err.message}\`);
   process.exit(0); // Non-fatal — don't block session

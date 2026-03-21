@@ -8,6 +8,11 @@ import {
   getSandboxPolicyTemplate,
   getMonitorEmitterScript,
   getFileLockHookScript,
+  getSessionStartHook,
+  getAutoCheckpointHook,
+  getAgentCompleteHook,
+  getGateManagerScript,
+  getWorktreeManagerScript,
 } from '@qlucent/fishi-core';
 
 const CURRENT_VERSION = '0.14.4';
@@ -172,6 +177,30 @@ export async function upgradeCommand(): Promise<void> {
   if (!fs.existsSync(researchPath)) {
     fs.mkdirSync(researchPath, { recursive: true });
     created.push('.fishi/research/');
+  }
+
+  // 11. Regenerate hook scripts with latest versions (includes monitor emission)
+  const hooksToRegenerate = [
+    { name: 'session-start.mjs', getter: getSessionStartHook },
+    { name: 'auto-checkpoint.mjs', getter: getAutoCheckpointHook },
+    { name: 'agent-complete.mjs', getter: getAgentCompleteHook },
+    { name: 'gate-manager.mjs', getter: getGateManagerScript },
+    { name: 'worktree-manager.mjs', getter: getWorktreeManagerScript },
+    { name: 'monitor-emitter.mjs', getter: getMonitorEmitterScript },
+    { name: 'file-lock-hook.mjs', getter: getFileLockHookScript },
+  ];
+
+  const scriptsDir = path.join(targetDir, '.fishi', 'scripts');
+  if (fs.existsSync(scriptsDir)) {
+    for (const hook of hooksToRegenerate) {
+      try {
+        const scriptPath = path.join(scriptsDir, hook.name);
+        fs.writeFileSync(scriptPath, hook.getter(), 'utf-8');
+        updated.push(`.fishi/scripts/${hook.name} (regenerated with monitoring)`);
+      } catch {
+        // Skip hooks that fail to generate
+      }
+    }
   }
 
   spinner.succeed('Upgrade complete');

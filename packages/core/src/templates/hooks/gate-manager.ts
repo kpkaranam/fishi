@@ -145,6 +145,10 @@ function createGate(phase, description) {
   });
 
   saveGates(data);
+
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.created', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
+
   console.log(JSON.stringify({ phase, status: 'pending', action: 'created' }));
 }
 
@@ -222,6 +226,9 @@ function approveGate(phase) {
   // Update project.yaml phase
   updateProjectPhase(phase, 'approved');
 
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.approved', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
+
   console.log(JSON.stringify({ phase, status: 'approved', action: 'approved', docs_checked: gate.docs_checked }));
 }
 
@@ -238,6 +245,9 @@ function rejectGate(phase, reason) {
   gate.reason = reason || 'No reason provided';
   gate.timestamp = new Date().toISOString();
   saveGates(data);
+
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.rejected', agent: 'master-orchestrator', data: { phase, reason: gate.reason } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'rejected', reason: gate.reason, action: 'rejected' }));
 }
@@ -256,6 +266,9 @@ function skipGate(phase) {
   saveGates(data);
 
   updateProjectPhase(phase, 'skipped');
+
+  // Emit monitoring event
+  try { import('./monitor-emitter.mjs').then(m => m.emitMonitorEvent(process.cwd(), { type: 'gate.skipped', agent: 'master-orchestrator', data: { phase } })).catch(() => {}); } catch {}
 
   console.log(JSON.stringify({ phase, status: 'skipped', action: 'skipped' }));
 }

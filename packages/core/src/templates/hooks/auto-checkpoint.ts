@@ -236,6 +236,12 @@ try {
   pruneCheckpoints();
 
   console.log(\`[FISHI] Checkpoint created: \${checkpointName}\`);
+
+  // Emit monitoring event
+  try {
+    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
+  } catch {}
 } catch (err) {
   console.error(\`[FISHI] Auto-checkpoint error: \${err.message}\`);
   process.exit(0); // Non-fatal

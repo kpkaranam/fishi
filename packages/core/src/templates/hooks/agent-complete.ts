@@ -180,6 +180,12 @@ try {
   if (parsed.filesChanged.length > 0) {
     console.log(\`[FISHI] Files changed: \${parsed.filesChanged.join(', ')}\`);
   }
+
+  // Emit monitoring event
+  try {
+    const { emitMonitorEvent } = await import('./monitor-emitter.mjs');
+    emitMonitorEvent(projectRoot, { type: 'agent.completed', agent: agentName || 'unknown', data: { status: status || 'unknown', filesChanged: parsed.filesChanged ? parsed.filesChanged.length : 0, summary: summary || '', taskId: taskId || '' } });
+  } catch {}
 } catch (err) {
   console.error(\`[FISHI] Agent complete hook error: \${err.message}\`);
   process.exit(0); // Non-fatal
