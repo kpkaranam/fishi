@@ -15,6 +15,7 @@ import { previewCommand } from './commands/preview.js';
 import { designCommand } from './commands/design.js';
 import { securityCommand } from './commands/security.js';
 import { patternsCommand } from './commands/patterns.js';
+import { upgradeCommand } from './commands/upgrade.js';
 
 const program = new Command();
 
@@ -25,7 +26,7 @@ program
       ' — AI-Powered Software Delivery Pipeline\n' +
       '   Autonomous AI development with human governance'
   )
-  .version('0.14.3');
+  .version('0.14.4');
 
 program
   .command('init')
@@ -125,5 +126,10 @@ program
   .option('-c, --category <category>', 'Filter by category')
   .option('-o, --output <path>', 'Save guide to file')
   .action(patternsCommand);
+
+program
+  .command('upgrade')
+  .description('Upgrade existing FISHI project to the latest version')
+  .action(upgradeCommand);
 
 program.parse();
