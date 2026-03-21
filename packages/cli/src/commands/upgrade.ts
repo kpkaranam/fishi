@@ -3,7 +3,6 @@ import ora from 'ora';
 import path from 'path';
 import fs from 'fs';
 import {
-  getSettingsJsonTemplate,
   getSoulMdTemplate,
   getAgentsMdTemplate,
   getSandboxPolicyTemplate,
@@ -11,7 +10,51 @@ import {
   getFileLockHookScript,
 } from '@qlucent/fishi-core';
 
-const CURRENT_VERSION = '0.14.3';
+const CURRENT_VERSION = '0.14.4';
+
+/**
+ * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }
+ */
+function fixHooksFormat(settings: any): boolean {
+  if (!settings.hooks) return false;
+  let fixed = false;
+
+  for (const [event, entries] of Object.entries(settings.hooks)) {
+    if (!Array.isArray(entries)) continue;
+    for (let i = 0; i < (entries as any[]).length; i++) {
+      const entry = (entries as any[])[i];
+      // Old format: { matcher, command } → New format: { matcher, hooks: [{ type: "command", command }] }
+      if (entry.command && !entry.hooks) {
+        (entries as any[])[i] = {
+          matcher: entry.matcher || '',
+          hooks: [{ type: 'command', command: entry.command }],
+        };
+        fixed = true;
+      }
+    }
+  }
+
+  return fixed;
+}
+
+/**
+ * Remove invalid deny rules that Claude Code rejects.
+ */
+function fixDenyRules(settings: any): boolean {
+  if (!settings.permissions?.deny) return false;
+  const original = settings.permissions.deny.length;
+
+  // Remove rules with empty parentheses or invalid patterns
+  settings.permissions.deny = settings.permissions.deny.filter((rule: string) => {
+    // Remove fork bomb pattern — empty parens rejected
+    if (rule.includes(':(){ :|:& };:')) return false;
+    // Remove any Bash() with empty content
+    if (/^Bash\(\s*\)$/.test(rule)) return false;
+    return true;
+  });
+
+  return settings.permissions.deny.length !== original;
+}
 
 export async function upgradeCommand(): Promise<void> {
   const targetDir = process.cwd();
@@ -30,42 +73,28 @@ export async function upgradeCommand(): Promise<void> {
   const updated: string[] = [];
   const created: string[] = [];
 
-  // 1. Fix settings.json hooks format
+  // 1. Fix settings.json — hooks format + deny rules
   const settingsPath = path.join(targetDir, '.claude', 'settings.json');
   if (fs.existsSync(settingsPath)) {
     try {
       const existing = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      let needsFix = false;
+      const hooksFixed = fixHooksFormat(existing);
+      const denyFixed = fixDenyRules(existing);
 
-      // Check if hooks use old format (command instead of hooks array)
-      if (existing.hooks) {
-        for (const [event, entries] of Object.entries(existing.hooks)) {
-          if (Array.isArray(entries)) {
-            for (const entry of entries as any[]) {
-              if (entry.command && !entry.hooks) {
-                needsFix = true;
-                break;
-              }
-            }
-          }
-          if (needsFix) break;
-        }
-      }
-
-      if (needsFix) {
+      if (hooksFixed || denyFixed) {
         // Backup old settings
         const backupDir = path.join(targetDir, '.fishi', 'backup', 'upgrade-' + new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, ''));
         fs.mkdirSync(backupDir, { recursive: true });
         fs.copyFileSync(settingsPath, path.join(backupDir, 'settings.json'));
 
-        // Write new settings
-        fs.writeFileSync(settingsPath, getSettingsJsonTemplate(), 'utf-8');
-        updated.push('.claude/settings.json (hooks format fixed)');
+        // Write fixed settings (preserves all user customizations)
+        fs.writeFileSync(settingsPath, JSON.stringify(existing, null, 2) + '\n', 'utf-8');
+
+        if (hooksFixed) updated.push('.claude/settings.json (hooks format: matcher+command → matcher+hooks array)');
+        if (denyFixed) updated.push('.claude/settings.json (removed invalid deny rules)');
       }
     } catch {
-      // If parsing fails, replace entirely
-      fs.writeFileSync(settingsPath, getSettingsJsonTemplate(), 'utf-8');
-      updated.push('.claude/settings.json (replaced — was corrupted)');
+      updated.push('.claude/settings.json (could not parse — please fix manually)');
     }
   }
 
@@ -144,7 +173,7 @@ export async function upgradeCommand(): Promise<void> {
   }
 
   if (created.length > 0) {
-    console.log(chalk.white.bold('  Created (new in v0.14):'));
+    console.log(chalk.white.bold('  Created (new in latest):'));
     for (const c of created) console.log(chalk.cyan(`    ${c}`));
     console.log('');
   }
