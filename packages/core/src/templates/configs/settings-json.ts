@@ -74,6 +74,8 @@ export function getSettingsJsonTemplate(): string {
 
         // Package managers
         "Bash(pnpm *)",
+        "Bash(npm *)",
+        "Bash(yarn *)",
         "Bash(npx *)",
         "Bash(node *)",
         "Bash(bun *)",
@@ -159,10 +161,6 @@ export function getSettingsJsonTemplate(): string {
         "Bash(dd if=*)",
         "Bash(> /dev/sda)",
         "Bash(fdisk *)",
-
-        // Package managers without pnpm (enforce pnpm)
-        "Bash(npm *)",
-        "Bash(yarn *)",
 
         // Network attacks
         "Bash(nmap *)",

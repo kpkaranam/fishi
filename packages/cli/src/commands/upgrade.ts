@@ -38,20 +38,31 @@ function fixHooksFormat(settings: any): boolean {
 }
 
 /**
- * Remove invalid deny rules that Claude Code rejects.
+ * Remove invalid or overly broad deny rules.
  */
 function fixDenyRules(settings: any): boolean {
   if (!settings.permissions?.deny) return false;
   const original = settings.permissions.deny.length;
 
-  // Remove rules with empty parentheses or invalid patterns
   settings.permissions.deny = settings.permissions.deny.filter((rule: string) => {
-    // Remove fork bomb pattern — empty parens rejected
+    // Remove fork bomb pattern — empty parens rejected by Claude Code
     if (rule.includes(':(){ :|:& };:')) return false;
     // Remove any Bash() with empty content
     if (/^Bash\(\s*\)$/.test(rule)) return false;
+    // Remove overly broad npm/yarn deny — blocks legitimate chained commands
+    if (rule === 'Bash(npm *)' || rule === 'Bash(yarn *)') return false;
     return true;
   });
+
+  // Ensure npm and yarn are in allow list (package manager agnostic)
+  if (settings.permissions?.allow) {
+    if (!settings.permissions.allow.includes('Bash(npm *)')) {
+      settings.permissions.allow.push('Bash(npm *)');
+    }
+    if (!settings.permissions.allow.includes('Bash(yarn *)')) {
+      settings.permissions.allow.push('Bash(yarn *)');
+    }
+  }
 
   return settings.permissions.deny.length !== original;
 }
