@@ -115,35 +115,103 @@ export async function initCommand(
         name: 'installDocker',
         message: 'How would you like to proceed?',
         choices: [
-          { name: 'Install Docker (opens install page — recommended)', value: 'install' },
+          { name: 'Install Docker automatically (recommended)', value: 'install' },
           { name: 'Continue without Docker (process-level isolation only)', value: 'skip' },
         ],
         default: 'install',
       }]);
 
       if (installDocker === 'install') {
-        const dockerUrl = 'https://docs.docker.com/get-docker/';
-        console.log('');
-        console.log(chalk.cyan(`  Opening: ${dockerUrl}`));
-        console.log(chalk.gray('  Install Docker, then run `fishi init` again.'));
-        console.log('');
+        const { execSync: execSyncInstall } = await import('child_process');
+        const platform = process.platform;
+        let installCmd = '';
+        let platformName = '';
 
-        // Try to open browser
-        try {
-          const { execSync: execSyncOpen } = await import('child_process');
-          const platform = process.platform;
-          if (platform === 'win32') execSyncOpen(`start ${dockerUrl}`, { stdio: 'ignore' });
-          else if (platform === 'darwin') execSyncOpen(`open ${dockerUrl}`, { stdio: 'ignore' });
-          else execSyncOpen(`xdg-open ${dockerUrl}`, { stdio: 'ignore' });
-        } catch {
-          console.log(chalk.gray(`  Visit: ${dockerUrl}`));
+        if (platform === 'win32') {
+          installCmd = 'winget install Docker.DockerDesktop --accept-package-agreements --accept-source-agreements';
+          platformName = 'Windows (winget)';
+        } else if (platform === 'darwin') {
+          installCmd = 'brew install --cask docker';
+          platformName = 'macOS (Homebrew)';
+        } else {
+          // Linux — try apt, then yum, then dnf
+          try {
+            execSyncInstall('which apt-get', { stdio: 'ignore' });
+            installCmd = 'sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2';
+            platformName = 'Linux (apt)';
+          } catch {
+            try {
+              execSyncInstall('which dnf', { stdio: 'ignore' });
+              installCmd = 'sudo dnf install -y docker docker-compose';
+              platformName = 'Linux (dnf)';
+            } catch {
+              try {
+                execSyncInstall('which yum', { stdio: 'ignore' });
+                installCmd = 'sudo yum install -y docker docker-compose';
+                platformName = 'Linux (yum)';
+              } catch {
+                console.log(chalk.red('  Could not detect package manager. Install Docker manually:'));
+                console.log(chalk.gray('  https://docs.docker.com/get-docker/'));
+                console.log(chalk.gray('  Then run `fishi init` again.'));
+                console.log('');
+                return;
+              }
+            }
+          }
         }
 
-        return;
-      }
+        console.log('');
+        console.log(chalk.cyan(`  Detected: ${platformName}`));
+        console.log(chalk.gray(`  Running: ${installCmd}`));
+        console.log('');
 
-      console.log(chalk.gray('  Continuing with process-level sandbox (limited isolation).'));
-      console.log('');
+        const installSpinner = ora('Installing Docker...').start();
+        try {
+          execSyncInstall(installCmd, { stdio: 'inherit', timeout: 300000 });
+          installSpinner.succeed('Docker installed');
+          console.log('');
+
+          // On Linux, start Docker service and add user to docker group
+          if (platform === 'linux') {
+            try {
+              execSyncInstall('sudo systemctl start docker', { stdio: 'ignore' });
+              execSyncInstall('sudo systemctl enable docker', { stdio: 'ignore' });
+              execSyncInstall(`sudo usermod -aG docker ${process.env.USER || 'root'}`, { stdio: 'ignore' });
+            } catch {}
+          }
+
+          // Wait for Docker to be ready
+          const readySpinner = ora('Waiting for Docker to start...').start();
+          let dockerReady = false;
+          for (let i = 0; i < 30; i++) {
+            try {
+              execSyncInstall('docker info', { stdio: 'ignore', timeout: 5000 });
+              dockerReady = true;
+              break;
+            } catch {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+
+          if (dockerReady) {
+            readySpinner.succeed('Docker is ready');
+            sandboxMode = 'docker';
+          } else {
+            readySpinner.warn('Docker installed but not running yet');
+            console.log(chalk.gray('  Start Docker Desktop manually, then run `fishi upgrade` to switch to Docker mode.'));
+            console.log(chalk.gray('  Continuing with process-level sandbox for now.'));
+          }
+          console.log('');
+        } catch (err) {
+          installSpinner.fail('Docker installation failed');
+          console.log(chalk.gray('  Install manually: https://docs.docker.com/get-docker/'));
+          console.log(chalk.gray('  Continuing with process-level sandbox.'));
+          console.log('');
+        }
+      } else {
+        console.log(chalk.gray('  Continuing with process-level sandbox (limited isolation).'));
+        console.log('');
+      }
     }
   }
 
