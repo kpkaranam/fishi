@@ -1,10 +1,13 @@
 <p align="center">
   <h1 align="center">FISHI</h1>
   <p align="center">
-    <strong>Your AI Dev Team That Actually Ships</strong>
+    <strong>AI-Powered Software Delivery Pipeline with Governance</strong>
   </p>
   <p align="center">
-    An autonomous multi-agent framework for Claude Code that takes projects from <b>idea to deployment</b>.
+    Structured multi-agent development pipelines for Claude Code with gate-based human oversight.
+  </p>
+  <p align="center">
+    <code>22+ Agents</code> &bull; <code>Dynamic Agent Creation</code> &bull; <code>8-Phase SDLC Pipeline</code> &bull; <code>Built-in Security Scanner</code> &bull; <code>Brownfield Safe</code> &bull; <code>Sandbox Isolation</code> &bull; <code>55 Integration Patterns</code>
   </p>
 </p>
 
@@ -15,17 +18,20 @@
   <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
   <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/agents-22+-purple?style=flat-square" alt="22+ agents">
-  <img src="https://img.shields.io/badge/tests-551-brightgreen?style=flat-square" alt="551 tests">
+  <img src="https://img.shields.io/badge/tests-609-brightgreen?style=flat-square" alt="609 tests">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
 </p>
 
 <p align="center">
-  <a href="#-quick-start">Quick Start</a> &bull;
-  <a href="#-features">Features</a> &bull;
-  <a href="#-how-it-works">How It Works</a> &bull;
-  <a href="#-commands">Commands</a> &bull;
-  <a href="#-safety">Safety</a> &bull;
-  <a href="#-changelog">Changelog</a>
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#why-fishi">Why FISHI?</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#integrations">Integrations</a> &bull;
+  <a href="#how-it-works">How It Works</a> &bull;
+  <a href="#comparison">Comparison</a> &bull;
+  <a href="#safety">Safety</a> &bull;
+  <a href="#commands">Commands</a> &bull;
+  <a href="#changelog">Changelog</a>
 </p>
 
 ---
@@ -34,7 +40,34 @@
 npx @qlucent/fishi init "Build me a SaaS invoicing platform with Stripe"
 ```
 
-> Run `claude` and watch **22+ AI agents** plan, research, code, test, and deploy your project.
+> 22+ AI agents plan, research, code, test, and deploy — you approve at gates.
+
+---
+
+## Why FISHI?
+
+<table>
+<tr>
+<td width="33%">
+
+### Structured Pipelines
+Every project follows an 8-phase SDLC pipeline with 5 approval gates. No cowboy coding — discovery, PRD, architecture, sprint planning, then development.
+
+</td>
+<td width="33%">
+
+### Human Governance
+You approve at every gate. Agents work autonomously between gates. Three-layer safety: SOUL.md boundaries, AGENTS.md role gates, per-agent tool permissions.
+
+</td>
+<td width="34%">
+
+### Brownfield Intelligence
+The only framework that safely integrates with existing projects. Auto-detects your stack, merges configs, never overwrites without permission.
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -150,7 +183,7 @@ npx @qlucent/fishi init "My project" --replace-all  # Replace all (backup saved)
 | Domain Agents | 4 | SaaS, Marketplace, Mobile/PWA, AI/ML architects |
 | Skills | 13 | brainstorming, code-gen, debugging, testing, deep-research, PRD... |
 | Commands | 8 | `/fishi-init`, `/fishi-gate`, `/fishi-board`, `/fishi-sprint`... |
-| Hook Scripts | 16 | session-start, auto-checkpoint, safety-check, monitor-emitter... |
+| Hook Scripts | 17 | session-start, auto-checkpoint, safety-check, monitor-emitter, file-lock... |
 | Pipeline Phases | 8 | 5 with approval gates |
 
 <details>
@@ -303,6 +336,107 @@ Auto-detects: Tailwind config, CSS custom properties, component libraries (shadc
 - **Root CLAUDE.md priority** — FISHI section prepended at top for highest priority
 - Deep codebase analysis: ORM, auth, CSS, API style, code patterns, tech debt
 
+### Native Security Scanner
+
+Built-in SAST + OWASP vulnerability detection — no external tools:
+
+```bash
+fishi security scan           # Scan project, colored severity output
+fishi security scan --json    # Machine-readable JSON
+fishi security rules          # List all 25+ active rules
+```
+
+Covers OWASP A01-A10: SQL injection, XSS, command injection, SSRF, hardcoded secrets, weak crypto, insecure cookies, path traversal, prototype pollution. Every finding includes CWE reference and fix recommendation.
+
+### Worktree Conflict Prevention
+
+Proactive conflict prevention when multiple agents work in parallel:
+
+- **File lock registry** — coordinators lock files before assigning tasks
+- **Overlap detection** — prevents two agents from touching the same file
+- **Lock lifecycle** — acquire, check, release per agent/task
+- **Escalation** — conflicts detected before work starts, not at merge time
+
+---
+
+## Integrations
+
+### Pattern Marketplace — 55 Blueprints, 21 Categories
+
+Pre-built architectural blueprints with Setup, Architecture, Key Patterns, and Pitfalls guidance:
+
+```bash
+fishi patterns list                           # Browse all categories
+fishi patterns search --query "stripe"        # Search by name/tool
+fishi patterns info --query "stripe"          # Full architectural guide
+fishi patterns select --query "stripe,auth0"  # Select for your project
+```
+
+<table>
+<tr>
+<td width="50%">
+
+| Category | Tools |
+|----------|-------|
+| **Authentication** | Auth0, Clerk, NextAuth, Supabase Auth, JWT |
+| **Payments** | Stripe, PayPal, LemonSqueezy |
+| **Email** | SendGrid, Resend, AWS SES, Mailgun |
+| **Analytics** | PostHog, Plausible, Mixpanel, GA |
+| **Database** | Prisma+PG, Drizzle, Supabase, MongoDB |
+| **Storage** | S3, Cloudinary, Supabase Storage, R2 |
+| **Search** | Algolia, Meilisearch, Typesense, Elasticsearch |
+| **Vector DB** | Qdrant, Milvus, Pinecone, Chroma |
+| **Monitoring** | Sentry, LogRocket, Datadog |
+| **CI/CD** | GitHub Actions, Vercel, Docker, Railway |
+| **Real-time** | WebSocket, Pusher, Ably, Supabase Realtime |
+
+</td>
+<td width="50%">
+
+| Category | Tools |
+|----------|-------|
+| **Project Management** | Jira |
+| **Communication** | Slack |
+| **E-commerce** | Shopify |
+| **Design** | Framer, Figma, Canva |
+| **Customer Support** | Freshdesk, Zendesk |
+| **Crawler** | Firecrawl |
+| **Web Scraping** | Scrapling |
+| **Hosting** | Netlify, Vercel |
+| **Domain** | GoDaddy, Google Domains |
+| **Cloud** | GCP, AWS |
+
+</td>
+</tr>
+</table>
+
+Selected patterns generate an architecture guide at `.fishi/patterns-guide.md` that agents reference during design.
+
+---
+
+## Comparison
+
+How FISHI compares to other approaches:
+
+| Capability | Raw Claude Code | Lovable / Bolt | FISHI |
+|-----------|----------------|---------------|-------|
+| **Agents** | 1 (you) | 1 AI | 22+ specialized agents |
+| **Pipeline** | None | None | 8-phase SDLC with 5 gates |
+| **Human oversight** | Manual | None | Gate-based approval |
+| **Brownfield support** | Manual | No (greenfield only) | Auto-detect + safe merge |
+| **Testing** | Optional | None | TDD enforced by Quality Lead |
+| **Security scanning** | None | None | 25+ SAST/OWASP rules built-in |
+| **Code review** | Manual | None | Coordinator review + safety layers |
+| **Project management** | External tools | None | Built-in Kanban, sprints, epics |
+| **Agent isolation** | Shared context | N/A | Git worktrees + sandbox |
+| **Conflict prevention** | N/A | N/A | File locking + overlap detection |
+| **Domain knowledge** | Generic | Generic | SaaS, Marketplace, Mobile, AI/ML specialists |
+| **Research** | Manual | None | Autonomous deep research agent |
+| **Design system** | None | Built-in | Auto-detect tokens + Brand Guardian |
+| **Observability** | None | None | TUI + web dashboard |
+| **Cost control** | None | Subscription | Per-agent model routing (Opus/Sonnet/Haiku) |
+| **Audit trail** | Git history | None | SOUL.md + AGENTS.md + gate logs + checkpoints |
+
 ---
 
 ## Safety
@@ -365,6 +499,8 @@ Inspired by the [OpenClaw incident prevention framework](https://openagents.mom)
 | `fishi dashboard [--port]` | Web dashboard at `:4269` |
 | `fishi preview [--dev-cmd]` | Start dev server with auto-detection |
 | `fishi design <detect\|init\|validate>` | Design system + Brand Guardian |
+| `fishi security <scan\|rules>` | Native SAST + OWASP vulnerability scanning |
+| `fishi patterns <list\|search\|select>` | Browse and select integration blueprints |
 | `fishi sandbox <status\|policy>` | Sandbox mode and policy info |
 | `fishi mcp add <name>` | Add MCP server |
 | `fishi reset [checkpoint]` | Rollback to a checkpoint |
@@ -472,7 +608,7 @@ AGENTS.md                        # Per-role action gates and escalation paths
   design-system.json             # Design tokens + component registry
   state/                         # Phase state, agent registry, gates, checkpoints, monitor
   taskboard/                     # Kanban board, backlog, sprints, epics
-  scripts/                       # 16 hook/utility scripts (.mjs, zero deps)
+  scripts/                       # 17 hook/utility scripts (.mjs, zero deps)
   research/                      # Deep research reports
   plans/                         # PRDs, architecture docs, ADRs
   memory/                        # Project context + per-agent memory
@@ -491,8 +627,8 @@ AGENTS.md                        # Per-role action gates and escalation paths
 
 <table>
 <tr>
-<td align="center"><b>551</b><br>Total Tests</td>
-<td align="center"><b>25</b><br>Test Files</td>
+<td align="center"><b>609</b><br>Total Tests</td>
+<td align="center"><b>28</b><br>Test Files</td>
 <td align="center"><b>51</b><br>E2E Tests</td>
 <td align="center"><b>3</b><br>Node Versions</td>
 </tr>
@@ -515,6 +651,40 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.14.0</b> — Worktree Conflict Prevention</summary>
+
+- **File lock registry** — coordinators lock files before assigning tasks
+- **Overlap detection** — prevents two agents from touching the same file
+- **Lock lifecycle** — acquire, check, release per agent/task
+- **file-lock-hook.mjs** — generated CLI for pipeline integration
+- 609 tests
+
+</details>
+
+<details>
+<summary><b>v0.13.0</b> — Pattern Marketplace</summary>
+
+- **55 integration blueprints** across 21 categories
+- Categories: Auth, Payments, Email, Analytics, Database, Storage, Search, Vector DB, Monitoring, CI/CD, Real-time, PM, Communication, E-commerce, Design, Support, Crawler, Scraping, Hosting, Domain, Cloud
+- `fishi patterns list|search|info|select|selected` commands
+- Architecture guides with Setup, Patterns, Pitfalls per integration
+- 594 tests
+
+</details>
+
+<details>
+<summary><b>v0.12.0</b> — Native Security Scanner</summary>
+
+- **25+ SAST/OWASP rules** — SQL injection, XSS, command injection, SSRF, path traversal, hardcoded secrets, weak crypto, insecure cookies
+- **CWE references** for every finding
+- **Detailed reports** — grouped by category, severity icons, fix recommendations
+- `fishi security scan|rules` commands with JSON and markdown output
+- Smart false positive reduction (skips comments, tests, node_modules)
+- 577 tests
+
+</details>
+
+<details>
 <summary><b>v0.11.0</b> — Three-Layer Agent Safety</summary>
 
 - **SOUL.md** — absolute boundaries file generated at project root
@@ -650,7 +820,7 @@ AGENTS.md                        # Per-role action gates and escalation paths
 
 ## Contributing
 
-Contributions welcome! Please open an issue first to discuss what you'd like to change.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup guide and guidelines. Please read our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
