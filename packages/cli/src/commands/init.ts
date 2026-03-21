@@ -28,8 +28,8 @@ export async function initCommand(
   const projectName = path.basename(targetDir);
 
   console.log('');
-  console.log(chalk.cyan.bold('  🐟 FISHI — Fuck It, Ship It'));
-  console.log(chalk.gray('  Autonomous agent framework for Claude Code'));
+  console.log(chalk.cyan.bold('  🐟 FISHI — AI-Powered Software Delivery Pipeline'));
+  console.log(chalk.gray('  Autonomous AI development with human governance'));
   console.log('');
 
   // Re-init guard: ask instead of hard exit

@@ -22,10 +22,10 @@ program
   .name('fishi')
   .description(
     chalk.cyan('🐟 FISHI') +
-      ' — Your AI Dev Team That Actually Ships\n' +
-      '   Autonomous agent framework for Claude Code'
+      ' — AI-Powered Software Delivery Pipeline\n' +
+      '   Autonomous AI development with human governance'
   )
-  .version('0.14.1');
+  .version('0.14.2');
 
 program
   .command('init')
