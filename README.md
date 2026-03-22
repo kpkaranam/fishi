@@ -18,7 +18,7 @@
   <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
   <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/agents-22+-purple?style=flat-square" alt="22+ agents">
-  <img src="https://img.shields.io/badge/tests-609+-brightgreen?style=flat-square" alt="609+ tests">
+  <img src="https://img.shields.io/badge/tests-613-brightgreen?style=flat-square" alt="613 tests">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
 </p>
 
@@ -651,6 +651,45 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.16.0</b> — Orchestration Engine (Major Fix)</summary>
+
+**The Big Fix** — making every FISHI feature actually work. ([#23](https://github.com/kpkaranam/fishi/issues/23))
+
+Previously, FISHI's pipeline features existed as templates and scripts but nothing enforced them at runtime. Claude Code read the CLAUDE.md as suggestions and coded everything directly on master, ignoring agents, worktrees, gates, and the entire pipeline.
+
+**What we learned from working plugins (superpowers, feature-dev):**
+- `<EXTREMELY-IMPORTANT>` blocks make instructions sticky
+- `<HARD-GATE>` markers force Claude to STOP and wait for user approval
+- Anti-rationalization tables block every shortcut excuse
+- Explicit Agent tool dispatch examples (not "you should delegate" but exact copy-paste prompts)
+- `allowed-tools` restrictions per phase prevent wrong actions
+- TodoWrite checklists make skipping steps visible
+
+**What changed:**
+- **CLAUDE.md rewrite** — from descriptive to imperative. 7 critical rules at top, anti-rationalization table, exact Agent dispatch patterns, HARD-GATEs at every phase transition
+- **`/fishi-init` rewrite** — 8-step orchestration skill. Each phase has: checklist, subagent dispatch, state updates, HARD-GATE blocking
+- **Phase Guard Hook** — new PreToolUse hook blocks code writes during planning phases, warns about writes outside worktrees during development
+- **Slash commands updated** — `/fishi-status`, `/fishi-gate`, `/fishi-board` now read actual state files and run scripts
+
+**Features now connected to pipeline:**
+
+| Feature | Before (broken) | After (working) |
+|---------|----------------|-----------------|
+| Agent dispatch | "You should delegate" (ignored) | Exact Agent tool examples in skill |
+| Worktrees | "Workers should use worktrees" | Phase guard blocks writes outside worktrees |
+| Gates | Scripts existed, never called | HARD-GATE at every phase + explicit gate commands |
+| TaskBoard | File existed, never updated | TodoWrite + board updates in every step |
+| Research | Agent file existed, never dispatched | Discovery phase dispatches deep-research-agent |
+| Memory/Learnings | Scripts existed, never called | Development phase includes memory/learnings commands |
+| MCP | "auto-discover" note | Architecture phase includes MCP detection |
+| Checkpoints | Hook existed but path broken | Fixed import paths + session-start reads checkpoints |
+| Monitor | Events never recorded | Fixed import paths + all hooks emit events |
+
+- 613 tests
+
+</details>
+
+<details>
 <summary><b>v0.15.0</b> — Monitoring Events + Docker Auto-Install + Upgrade</summary>
 
 - **All hooks emit monitoring events** — session.started, agent.completed, checkpoint.created, gate.*, worktree.* now written to monitor.json ([#19](https://github.com/kpkaranam/fishi/issues/19))
