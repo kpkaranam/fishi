@@ -414,7 +414,8 @@ export async function initCommand(
     }
 
     // Write sandbox configuration
-    const sandboxYaml = `\nsandbox:\n  mode: ${sandboxMode}\n  docker_available: ${dockerAvailable}\n`;
+    const dockerNow = sandboxMode === 'docker' || detectDocker();
+    const sandboxYaml = `\nsandbox:\n  mode: ${sandboxMode}\n  docker_available: ${dockerNow}\n`;
     const fishiYamlPath = path.join(targetDir, '.fishi', 'fishi.yaml');
     if (fs.existsSync(fishiYamlPath)) {
       fs.appendFileSync(fishiYamlPath, sandboxYaml, 'utf-8');

@@ -151,7 +151,7 @@ const isMain = process.argv[1] &&
 if (isMain) {
   const raw = process.argv[2];
   if (!raw) {
-    console.error('[FISHI] Usage: node .fishi/scripts/monitor-emitter.mjs \'{"type":"...","agent":"...","data":{...}}\'');
+    console.error("[FISHI] Usage: node .fishi/scripts/monitor-emitter.mjs " + JSON.stringify({"type":"...","agent":"...","data":{}}));
     process.exit(1);
   }
 

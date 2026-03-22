@@ -26,7 +26,7 @@ program
       ' — AI-Powered Software Delivery Pipeline\n' +
       '   Autonomous AI development with human governance'
   )
-  .version('0.16.1');
+  .version('0.16.2');
 
 program
   .command('init')
