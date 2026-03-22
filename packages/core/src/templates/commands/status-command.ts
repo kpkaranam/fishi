@@ -1,71 +1,91 @@
 export function getStatusCommand(): string {
-  return `# /fishi-status — Project Status
+  return `# /fishi-status — Project Status Dashboard
 
 ## Description
-Show a comprehensive overview of project progress, active agents, and TaskBoard summary.
-
-## Usage
-\`\`\`
-/fishi-status
-/fishi-status --sprint     # Show current sprint details only
-/fishi-status --agents     # Show active agent status only
-/fishi-status --verbose    # Show full details for all sections
-\`\`\`
+Show a comprehensive overview of project progress by reading FISHI state files directly.
 
 ## Instructions
 
-When the user runs \`/fishi-status\`, gather and display the following:
+When the user runs \`/fishi-status\`, execute these steps IN ORDER:
 
-### 1. Sprint Summary
-- Read \`.fishi/board.md\` for current sprint info
-- Display:
-  - Sprint name and date range
-  - Days remaining
-  - Story points: planned / completed / remaining
-  - Burndown status (on track / behind / ahead)
+### 1. Read Current Phase
 
-### 2. TaskBoard Summary
-- Count tasks by column:
-  - Backlog: X tasks
-  - Ready: X tasks
-  - In Progress: X tasks
-  - In Review: X tasks
-  - Done: X tasks (this sprint)
-- Highlight any blocked tasks
-
-### 3. Active Agents
-- Check \`.fishi/agents/\` for active agent state files
-- For each agent, show:
-  - Agent role (orchestrator, developer, reviewer, etc.)
-  - Current task assignment
-  - Status (working, waiting, idle)
-  - Last activity timestamp
-
-### 4. Recent Activity
-- Show last 5 completed tasks
-- Show last 3 commits (if in a git repo)
-- Note any pending gate approvals
-
-### 5. Output Format
+\`\`\`bash
+cat .fishi/state/project.yaml
 \`\`\`
-=== Project Status ===
 
-Sprint 3: Jan 13 - Jan 24 (4 days remaining)
-Progress: [=========>    ] 62% (15/24 pts)
+Display the current phase, sprint number, and project type. Run:
+\`\`\`bash
+node .fishi/scripts/phase-runner.mjs current
+\`\`\`
 
-TaskBoard:
-  Backlog:     8 tasks
-  Ready:       3 tasks
-  In Progress: 2 tasks (TASK-041, TASK-044)
-  In Review:   1 task  (TASK-039)
-  Done:        6 tasks
+### 2. Read TaskBoard
 
-Active Agents: 2
-  orchestrator: idle
-  developer-1:  working on TASK-041
+\`\`\`bash
+cat .fishi/taskboard/board.md
+\`\`\`
 
-Pending Gates: 1
-  GATE-007: Design approval for user notifications
+Count tasks per column and display:
+- Backlog: X tasks
+- Ready: X tasks
+- In Progress: X tasks
+- In Review: X tasks
+- Done: X tasks
+
+Highlight any tasks marked as BLOCKED.
+
+### 3. Read Gate Status
+
+\`\`\`bash
+cat .fishi/state/gates.yaml
+\`\`\`
+
+Show each gate with its status (pending, approved, rejected, skipped).
+Flag any pending gates that are blocking progress.
+
+### 4. Read Monitor Events
+
+\`\`\`bash
+cat .fishi/state/monitor.json
+\`\`\`
+
+Show the 5 most recent events with timestamps.
+
+### 5. Check File Locks
+
+\`\`\`bash
+cat .fishi/state/file-locks.yaml
+\`\`\`
+
+Show any active file locks and which agent holds them.
+
+### 6. Output Format
+
+Present all information in this format:
+\`\`\`
+=== FISHI Project Status ===
+
+Phase: {current phase} | Sprint: {sprint number}
+Project: {project name} ({project type})
+
+--- TaskBoard ---
+  Backlog:     X tasks
+  Ready:       X tasks
+  In Progress: X tasks
+  In Review:   X tasks
+  Done:        X tasks
+
+--- Gates ---
+  {gate-name}: {status} ({timestamp})
+
+--- Active Locks ---
+  {file}: locked by {agent} for {task}
+
+--- Recent Events ---
+  {timestamp}: {event description}
+
+--- Next Action ---
+  {what should happen next based on current phase and state}
 \`\`\`
 `;
 }

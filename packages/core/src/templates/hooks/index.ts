@@ -15,3 +15,4 @@ export { getLearningsManagerScript } from './learnings-manager';
 export { getDocCheckerScript } from './doc-checker';
 export { getMonitorEmitterScript } from './monitor-emitter';
 export { getFileLockHookScript } from './file-lock-hook';
+export { getPhaseGuardHook } from './phase-guard';

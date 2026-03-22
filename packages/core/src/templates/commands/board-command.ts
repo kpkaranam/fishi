@@ -2,7 +2,7 @@ export function getBoardCommand(): string {
   return `# /fishi-board — Kanban Board
 
 ## Description
-Display the project kanban board and manage task movement between columns.
+Display the project kanban board by reading the taskboard state file and presenting tasks grouped by column.
 
 ## Usage
 \`\`\`
@@ -10,52 +10,59 @@ Display the project kanban board and manage task movement between columns.
 /fishi-board move <task-id> <column>  # Move a task to a column
 /fishi-board add <title>              # Quick-add a task to Backlog
 /fishi-board detail <task-id>         # Show full task details
-/fishi-board filter <epic-id>         # Show tasks for a specific epic
 \`\`\`
 
 ## Instructions
 
 ### /fishi-board (Display)
-- Read \`.fishi/board.md\`
-- Render a visual kanban board:
+
+Read the taskboard file:
+\`\`\`bash
+cat .fishi/taskboard/board.md
+\`\`\`
+
+Also read sprint info for context:
+\`\`\`bash
+cat .fishi/state/project.yaml
+\`\`\`
+
+Parse the board and display tasks grouped by column with counts:
 
 \`\`\`
-=== TaskBoard — Sprint 3 ===
+=== TaskBoard — Sprint {N} ===
 
-| Backlog (8)    | Ready (3)      | In Progress (2) | In Review (1)  | Done (6)       |
-|----------------|----------------|-----------------|----------------|----------------|
-| TASK-045 (3pt) | TASK-043 (5pt) | TASK-041 (3pt)  | TASK-039 (5pt) | TASK-038 (2pt) |
-| TASK-046 (2pt) | TASK-044 (3pt) | TASK-042 (5pt)  |                | TASK-037 (3pt) |
-| TASK-047 (5pt) | TASK-048 (2pt) |                 |                | TASK-036 (5pt) |
-| ...            |                |                 |                | ...            |
+| Backlog ({count}) | Ready ({count}) | In Progress ({count}) | In Review ({count}) | Done ({count}) |
+|--------------------|-----------------|----------------------|--------------------|--------------------|
+| {task-id}: {title} | {task-id}: ...  | {task-id}: ...       | {task-id}: ...     | {task-id}: ...     |
+| {task-id}: {title} |                 |                      |                    | {task-id}: ...     |
+
+Total: {total} tasks | Blocked: {blocked count}
 \`\`\`
+
+Highlight any BLOCKED tasks with their blocking reason.
 
 ### /fishi-board move <task-id> <column>
-- Valid columns: \`backlog\`, \`ready\`, \`in-progress\`, \`in-review\`, \`done\`
-- Update the task's position in \`.fishi/board.md\`
-- Update the task's timestamp
-- If moving to \`done\`:
-  - Update sprint burndown (reduce remaining points)
-  - Check if acceptance criteria are defined
-- If moving to \`in-progress\`:
-  - Check if an agent is assigned
+
+Valid columns: backlog, ready, in-progress, in-review, done
+
+1. Read the current board: \`cat .fishi/taskboard/board.md\`
+2. Move the task to the new column by editing \`.fishi/taskboard/board.md\`
+3. If moving to done, verify acceptance criteria are met
+4. If moving to in-progress, verify an agent is assigned
+5. Display the updated board
 
 ### /fishi-board add <title>
-- Trigger the TaskBoard Ops skill to create a new task
-- Add to the Backlog column by default
-- Prompt for: description, priority, story points, epic
+
+1. Read the current board: \`cat .fishi/taskboard/board.md\`
+2. Generate a new task ID (next sequential number)
+3. Add the task to the Backlog column in \`.fishi/taskboard/board.md\`
+4. Ask the user for: description, priority, assigned agent
+5. Display the updated board
 
 ### /fishi-board detail <task-id>
-- Show full task details:
-  - ID, title, description
-  - Status, column, assignee
-  - Priority, story points
-  - Epic and story references
-  - Acceptance criteria
-  - Comments and history
 
-### /fishi-board filter <epic-id>
-- Display the board showing only tasks belonging to the specified epic
-- Show epic progress summary at the top
+1. Read the board: \`cat .fishi/taskboard/board.md\`
+2. Find the task by ID
+3. Display full details: ID, title, description, status, assigned agent, priority, acceptance criteria, history
 `;
 }
