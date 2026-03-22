@@ -7,7 +7,7 @@
     Structured multi-agent development pipelines for Claude Code with gate-based human oversight.
   </p>
   <p align="center">
-    <code>22+ Agents</code> &bull; <code>Dynamic Agent Creation</code> &bull; <code>8-Phase SDLC Pipeline</code> &bull; <code>Built-in Security Scanner</code> &bull; <code>Brownfield Safe</code> &bull; <code>Sandbox Isolation</code> &bull; <code>55 Integration Patterns</code>
+    <code>22+ Agents</code> &bull; <code>Dynamic Agent Creation</code> &bull; <code>8-Phase SDLC Pipeline</code> &bull; <code>Built-in Security Scanner</code> &bull; <code>Brownfield Safe</code> &bull; <code>Phase-Enforced Pipeline</code> &bull; <code>55 Integration Patterns</code>
   </p>
 </p>
 
@@ -286,23 +286,23 @@ Dark theme UI with real-time updates. Agent cards, token breakdown by model, too
 </tr>
 </table>
 
-### Hybrid Sandbox
+### Sandbox (Process-Level Isolation)
 
-Agents run in isolated environments — not on your local machine:
+Agents run with restricted permissions via process-level isolation:
 
-| Mode | Isolation | When |
-|------|-----------|------|
-| **Docker** (recommended) | Full — containerized with resource limits, stripped env, restricted network | Docker detected at init |
-| **Process** (fallback) | Best-effort — restricted child_process, env stripping, timeouts | No Docker available |
+- **Stripped environment** — only essential + explicitly allowed env vars passed to agents
+- **Command filtering** — dangerous commands blocked by safety-check + phase-guard hooks
+- **Timeouts** — long-running agent commands auto-terminated
+- **Phase enforcement** — code writes blocked during planning phases
 
 Configurable via `.fishi/sandbox-policy.yaml`:
 ```yaml
 network_allow: [registry.npmjs.org, localhost]
 env_passthrough: [DATABASE_URL]
 timeout: 600
-memory: "2g"
-cpus: 2
 ```
+
+> **Coming soon:** Docker-based full isolation — each agent worktree runs in a container with resource limits and network restrictions. Infrastructure is built (detection, auto-install, policy, Dockerfile), runtime integration with worktree lifecycle is in progress.
 
 ### Frontend Quality Engine
 
@@ -428,7 +428,7 @@ How FISHI compares to other approaches:
 | **Security scanning** | None | None | 25+ SAST/OWASP rules built-in |
 | **Code review** | Manual | None | Coordinator review + safety layers |
 | **Project management** | External tools | None | Built-in Kanban, sprints, epics |
-| **Agent isolation** | Shared context | N/A | Git worktrees + sandbox |
+| **Agent isolation** | Shared context | N/A | Git worktrees + process sandbox (Docker coming soon) |
 | **Conflict prevention** | N/A | N/A | File locking + overlap detection |
 | **Domain knowledge** | Generic | Generic | SaaS, Marketplace, Mobile, AI/ML specialists |
 | **Research** | Manual | None | Autonomous deep research agent |
@@ -781,12 +781,12 @@ Previously, FISHI's pipeline features existed as templates and scripts but nothi
 </details>
 
 <details>
-<summary><b>v0.7.0</b> — Hybrid Sandbox</summary>
+<summary><b>v0.7.0</b> — Sandbox Infrastructure</summary>
 
-- Docker mode (full isolation) + process mode (fallback)
-- Auto-detect Docker at init, prompt user for preference
-- Sandbox policy (network, env, timeout, resources)
-- Brownfield: sandbox worktrees only, main project untouched
+- Process-level isolation: env stripping, command filtering, timeouts
+- Docker detection + auto-install via OS package manager
+- Sandbox policy config (network allowlist, env passthrough, resource limits)
+- Docker runtime integration with worktrees: in progress
 - 488 tests
 
 </details>
