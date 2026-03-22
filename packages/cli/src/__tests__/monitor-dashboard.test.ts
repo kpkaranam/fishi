@@ -75,8 +75,8 @@ describe('Dashboard HTML', () => {
     expect(html).toContain('FISHI Agent Dashboard');
     expect(html).toContain('/api/state');
     expect(html).toContain('Agent Completions');
-    expect(html).toContain('Tokens by Model');
-    expect(html).toContain('Tools Used');
+    expect(html).toContain('Checkpoints');
+    expect(html).toContain('TaskBoard');
     expect(html).toContain('Gates');
     expect(html).toContain('Recent Events');
     expect(html).toContain('Agent Activity');

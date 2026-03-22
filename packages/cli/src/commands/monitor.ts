@@ -4,7 +4,7 @@ import path from 'path';
 import { parse as parseYaml } from 'yaml';
 import { readMonitorState, getAgentSummary } from '@qlucent/fishi-core';
 
-const PHASES = ['init', 'discovery', 'planning', 'development', 'testing', 'review', 'deployed'];
+const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment', 'deployed'];
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -68,34 +68,13 @@ function renderMonitor(projectDir: string): void {
 
   // Summary stats
   console.log(renderDivider('Summary'));
+  const checkpointCount = events.filter(e => e.type === 'checkpoint.created').length;
   console.log(
-    `  ${chalk.bold('Completions:')} ${chalk.cyan(summary.totalAgentCompletions)}` +
-    `   ${chalk.bold('Files Changed:')} ${chalk.cyan(summary.totalFilesChanged)}` +
-    `   ${chalk.bold('Tokens:')} ${chalk.cyan(formatNumber(summary.totalTokens))}` +
-    `   ${chalk.bold('Dynamic Agents:')} ${chalk.cyan(summary.dynamicAgentsCreated)}`
+    `  ${chalk.bold('Events:')} ${chalk.cyan(events.length)}` +
+    `   ${chalk.bold('Checkpoints:')} ${chalk.cyan(checkpointCount)}` +
+    `   ${chalk.bold('Agent Completions:')} ${chalk.cyan(summary.totalAgentCompletions)}` +
+    `   ${chalk.bold('Files Changed:')} ${chalk.cyan(summary.totalFilesChanged)}`
   );
-
-  // Tokens by model
-  console.log(renderDivider('Tokens by Model'));
-  const modelEntries = Object.entries(summary.tokensByModel);
-  if (modelEntries.length === 0) {
-    console.log(chalk.gray('  (none yet)'));
-  } else {
-    for (const [model, tokens] of modelEntries.sort((a, b) => b[1] - a[1])) {
-      console.log(`  ${chalk.yellow(model.padEnd(30))} ${chalk.cyan(formatNumber(tokens))}`);
-    }
-  }
-
-  // Tools used
-  console.log(renderDivider('Tools Used'));
-  const toolEntries = Object.entries(summary.toolsUsed);
-  if (toolEntries.length === 0) {
-    console.log(chalk.gray('  (none yet)'));
-  } else {
-    for (const [tool, count] of toolEntries.sort((a, b) => b[1] - a[1]).slice(0, 10)) {
-      console.log(`  ${chalk.yellow(tool.padEnd(30))} ${chalk.cyan(count)}`);
-    }
-  }
 
   // Agent activity
   console.log(renderDivider('Agent Activity'));

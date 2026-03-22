@@ -187,10 +187,10 @@ export function getDashboardHtml(): string {
   <main>
     <!-- Stat cards -->
     <div class="stat-grid">
+      <div class="card"><div class="card-label">Total Events</div><div class="card-value" id="statEvents">—</div></div>
+      <div class="card"><div class="card-label">Gates Passed</div><div class="card-value" id="statGates">—</div></div>
+      <div class="card"><div class="card-label">Checkpoints</div><div class="card-value" id="statCheckpoints">—</div></div>
       <div class="card"><div class="card-label">Agent Completions</div><div class="card-value" id="statCompletions">—</div></div>
-      <div class="card"><div class="card-label">Files Changed</div><div class="card-value" id="statFiles">—</div></div>
-      <div class="card"><div class="card-label">Total Tokens</div><div class="card-value" id="statTokens">—</div></div>
-      <div class="card"><div class="card-label">Dynamic Agents</div><div class="card-value" id="statDynamic">—</div></div>
     </div>
 
     <!-- Phase bar -->
@@ -213,12 +213,12 @@ export function getDashboardHtml(): string {
     <!-- Bottom row -->
     <div class="bottom-grid">
       <div class="panel">
-        <div class="panel-title">Tokens by Model</div>
-        <div id="tokensPanel"><span class="empty-msg">No data.</span></div>
+        <div class="panel-title">Checkpoints</div>
+        <div id="checkpointsPanel"><span class="empty-msg">No checkpoints.</span></div>
       </div>
       <div class="panel">
-        <div class="panel-title">Tools Used</div>
-        <div id="toolsPanel"><span class="empty-msg">No data.</span></div>
+        <div class="panel-title">TaskBoard</div>
+        <div id="taskboardPanel"><span class="empty-msg">No tasks.</span></div>
       </div>
       <div class="panel">
         <div class="panel-title">Gates</div>
@@ -228,7 +228,7 @@ export function getDashboardHtml(): string {
   </main>
 
   <script>
-    const PHASES = ['init', 'discovery', 'planning', 'development', 'testing', 'review', 'deployed'];
+    const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment', 'deployed'];
 
     function fmt(n) {
       if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -282,12 +282,36 @@ export function getDashboardHtml(): string {
       ).join('');
     }
 
-    function renderKV(data, panelId, keyClass) {
-      const panel = document.getElementById(panelId);
-      const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-      if (!entries.length) { panel.innerHTML = '<span class="empty-msg">No data.</span>'; return; }
-      panel.innerHTML = entries.map(([k, v]) =>
-        \`<div class="kv-row"><span class="kv-key">\${k}</span><span class="kv-val">\${fmt(v)}</span></div>\`
+    function renderCheckpoints(events) {
+      const panel = document.getElementById('checkpointsPanel');
+      const checkpoints = events.filter(e => e.type === 'checkpoint.created').slice(-5).reverse();
+      if (!checkpoints.length) { panel.innerHTML = '<span class="empty-msg">No checkpoints.</span>'; return; }
+      panel.innerHTML = checkpoints.map(c =>
+        \`<div class="kv-row">
+          <span class="kv-key">#\${c.data?.checkpointId || '?'} — \${c.data?.phase || 'unknown'}</span>
+          <span class="kv-val">\${fmtTime(c.timestamp)}</span>
+        </div>\`
+      ).join('');
+    }
+
+    function renderTaskboard(events) {
+      const panel = document.getElementById('taskboardPanel');
+      // Get latest checkpoint with taskCounts
+      const withCounts = events.filter(e => e.data?.taskCounts).reverse();
+      if (!withCounts.length) { panel.innerHTML = '<span class="empty-msg">No task data.</span>'; return; }
+      const tc = withCounts[0].data.taskCounts;
+      const cols = [
+        { name: 'Backlog', count: tc.backlog || 0, color: '#6b7280' },
+        { name: 'Ready', count: tc.ready || 0, color: '#f59e0b' },
+        { name: 'In Progress', count: tc.inProgress || 0, color: '#3b82f6' },
+        { name: 'Review', count: tc.review || 0, color: '#a855f7' },
+        { name: 'Done', count: tc.done || 0, color: '#22c55e' },
+      ];
+      panel.innerHTML = cols.map(c =>
+        \`<div class="kv-row">
+          <span class="kv-key" style="color:\${c.color}">\${c.name}</span>
+          <span class="kv-val">\${c.count}</span>
+        </div>\`
       ).join('');
     }
 
@@ -316,17 +340,21 @@ export function getDashboardHtml(): string {
         dot.classList.remove('offline');
 
         const s = data.summary || {};
+        const events = data.events || [];
+        const gates = data.gates || [];
+
+        // Stat cards
+        document.getElementById('statEvents').textContent = fmt(events.length);
+        document.getElementById('statGates').textContent = fmt(gates.filter(g => g.status === 'approved').length);
+        document.getElementById('statCheckpoints').textContent = fmt(events.filter(e => e.type === 'checkpoint.created').length);
         document.getElementById('statCompletions').textContent = fmt(s.totalAgentCompletions || 0);
-        document.getElementById('statFiles').textContent = fmt(s.totalFilesChanged || 0);
-        document.getElementById('statTokens').textContent = fmt(s.totalTokens || 0);
-        document.getElementById('statDynamic').textContent = fmt(s.dynamicAgentsCreated || 0);
 
         renderPhase(data.phase || 'init');
-        renderEvents(data.events || []);
+        renderEvents(events);
         renderAgents(data.agentSummary || {});
-        renderKV(s.tokensByModel || {}, 'tokensPanel');
-        renderKV(s.toolsUsed || {}, 'toolsPanel');
-        renderGates(data.gates || []);
+        renderCheckpoints(events);
+        renderTaskboard(events);
+        renderGates(gates);
 
         lu.textContent = 'Updated: ' + new Date().toLocaleTimeString();
       } catch (err) {
