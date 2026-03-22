@@ -295,10 +295,11 @@ export function getDashboardHtml(): string {
       const panel = document.getElementById('gatesPanel');
       if (!gates || !gates.length) { panel.innerHTML = '<span class="empty-msg">No gates.</span>'; return; }
       panel.innerHTML = gates.map(g => {
-        const cls = g.status === 'passed' ? 'passed' : g.status === 'failed' ? 'failed' : 'pending';
+        const cls = g.status === 'approved' ? 'passed' : g.status === 'rejected' ? 'failed' : g.status === 'skipped' ? 'pending' : 'pending';
+        const label = g.phase || g.name || 'unknown';
         return \`<div class="gate-row">
           <span class="gate-dot \${cls}"></span>
-          <span class="gate-name">\${g.name}</span>
+          <span class="gate-name">\${label}</span>
           <span class="gate-status \${cls}">\${g.status}</span>
         </div>\`;
       }).join('');

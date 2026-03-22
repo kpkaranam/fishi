@@ -45,7 +45,7 @@ export async function dashboardCommand(options: { port?: string }): Promise<void
         if (fs.existsSync(projectYamlPath)) {
           try {
             const projectState = parseYaml(fs.readFileSync(projectYamlPath, 'utf-8'));
-            phase = projectState?.current_phase || 'init';
+            phase = projectState?.phase || projectState?.current_phase || 'init';
           } catch {
             // ignore
           }
@@ -87,6 +87,19 @@ export async function dashboardCommand(options: { port?: string }): Promise<void
 
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not found');
+  });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log('');
+      console.log(chalk.cyan.bold('  FISHI Agent Dashboard'));
+      console.log('');
+      console.log(chalk.green(`  Dashboard is already running on port ${port}`));
+      console.log(`  ${chalk.bold('URL:')}  ${chalk.cyan(`http://localhost:${port}`)}`);
+      console.log('');
+      process.exit(0);
+    }
+    throw err;
   });
 
   server.listen(port, () => {
