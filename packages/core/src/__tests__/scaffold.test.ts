@@ -40,7 +40,7 @@ describe('generateScaffold', () => {
     expect(result.agentCount).toBe(19);
     expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
-    expect(result.hookCount).toBe(17);
+    expect(result.hookCount).toBe(18);
     expect(result.filesCreated).toBeGreaterThan(0);
   });
 

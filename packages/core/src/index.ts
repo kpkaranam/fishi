@@ -98,6 +98,7 @@ export {
   getDocCheckerScript,
   getMonitorEmitterScript,
   getFileLockHookScript,
+  getPhaseGuardHook,
 } from './templates/hooks/index';
 
 // Command templates

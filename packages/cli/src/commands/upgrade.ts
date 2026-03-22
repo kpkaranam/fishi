@@ -8,14 +8,20 @@ import {
   getSandboxPolicyTemplate,
   getMonitorEmitterScript,
   getFileLockHookScript,
+  getPhaseGuardHook,
   getSessionStartHook,
   getAutoCheckpointHook,
   getAgentCompleteHook,
   getGateManagerScript,
   getWorktreeManagerScript,
+  getSettingsJsonTemplate,
+  getInitCommand,
+  getStatusCommand,
+  getGateCommand,
+  getBoardCommand,
 } from '@qlucent/fishi-core';
 
-const CURRENT_VERSION = '0.15.1';
+const CURRENT_VERSION = '0.16.0';
 
 /**
  * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }
@@ -188,6 +194,7 @@ export async function upgradeCommand(): Promise<void> {
     { name: 'worktree-manager.mjs', getter: getWorktreeManagerScript },
     { name: 'monitor-emitter.mjs', getter: getMonitorEmitterScript },
     { name: 'file-lock-hook.mjs', getter: getFileLockHookScript },
+    { name: 'phase-guard.mjs', getter: getPhaseGuardHook },
   ];
 
   const scriptsDir = path.join(targetDir, '.fishi', 'scripts');
@@ -201,6 +208,46 @@ export async function upgradeCommand(): Promise<void> {
         // Skip hooks that fail to generate
       }
     }
+  }
+
+  // 12. Regenerate slash commands with orchestration enforcement
+  const commandsDir = path.join(targetDir, '.claude', 'commands');
+  if (fs.existsSync(commandsDir)) {
+    const commandsToRegenerate = [
+      { name: 'fishi-init.md', getter: getInitCommand },
+      { name: 'fishi-status.md', getter: getStatusCommand },
+      { name: 'fishi-gate.md', getter: getGateCommand },
+      { name: 'fishi-board.md', getter: getBoardCommand },
+    ];
+    for (const cmd of commandsToRegenerate) {
+      try {
+        fs.writeFileSync(path.join(commandsDir, cmd.name), cmd.getter(), 'utf-8');
+        updated.push(`.claude/commands/${cmd.name} (orchestration enforcement)`);
+      } catch {}
+    }
+  }
+
+  // 13. Regenerate settings.json with phase-guard hook
+  const settingsPath2 = path.join(targetDir, '.claude', 'settings.json');
+  if (fs.existsSync(settingsPath2)) {
+    try {
+      const existing2 = JSON.parse(fs.readFileSync(settingsPath2, 'utf-8'));
+      // Check if phase-guard is already in PreToolUse hooks
+      const preToolUse = existing2.hooks?.PreToolUse || [];
+      const hasPhaseGuard = preToolUse.some((h: any) =>
+        h.hooks?.some((hook: any) => hook.command?.includes('phase-guard'))
+      );
+      if (!hasPhaseGuard) {
+        if (!existing2.hooks) existing2.hooks = {};
+        if (!existing2.hooks.PreToolUse) existing2.hooks.PreToolUse = [];
+        existing2.hooks.PreToolUse.push({
+          matcher: 'Write|Edit',
+          hooks: [{ type: 'command', command: 'node .fishi/scripts/phase-guard.mjs' }],
+        });
+        fs.writeFileSync(settingsPath2, JSON.stringify(existing2, null, 2) + '\n', 'utf-8');
+        updated.push('.claude/settings.json (added phase-guard hook)');
+      }
+    } catch {}
   }
 
   spinner.succeed('Upgrade complete');

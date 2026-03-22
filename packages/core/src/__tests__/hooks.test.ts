@@ -16,6 +16,7 @@ import {
   getLearningsManagerScript,
   getDocCheckerScript,
   getMonitorEmitterScript,
+  getPhaseGuardHook,
 } from '../index';
 
 describe('Hook / Script Templates', () => {
@@ -36,10 +37,11 @@ describe('Hook / Script Templates', () => {
     ['learnings-manager', getLearningsManagerScript],
     ['doc-checker', getDocCheckerScript],
     ['monitor-emitter', getMonitorEmitterScript],
+    ['phase-guard', getPhaseGuardHook],
   ];
 
-  it('all 16 hooks are accounted for', () => {
-    expect(hooks).toHaveLength(16);
+  it('all 17 hooks are accounted for', () => {
+    expect(hooks).toHaveLength(17);
   });
 
   it.each(hooks)('%s returns a non-empty string', (_name, hookFn) => {

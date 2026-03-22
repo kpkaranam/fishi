@@ -72,6 +72,7 @@ import { getLearningsManagerScript } from '../templates/hooks/learnings-manager.
 import { getDocCheckerScript } from '../templates/hooks/doc-checker.js';
 import { getMonitorEmitterScript } from '../templates/hooks/monitor-emitter.js';
 import { getFileLockHookScript } from '../templates/hooks/file-lock-hook.js';
+import { getPhaseGuardHook } from '../templates/hooks/phase-guard.js';
 
 // Command templates
 import { getInitCommand } from '../templates/commands/init-command.js';
@@ -276,7 +277,8 @@ export async function generateScaffold(
   await write('.fishi/scripts/doc-checker.mjs', getDocCheckerScript());
   await write('.fishi/scripts/monitor-emitter.mjs', getMonitorEmitterScript());
   await write('.fishi/scripts/file-lock-hook.mjs', getFileLockHookScript());
-  const hookCount = 17;
+  await write('.fishi/scripts/phase-guard.mjs', getPhaseGuardHook());
+  const hookCount = 18;
 
   // ── Initial TODO Files ─────────────────────────────────────────────
   const todoTemplate = (name: string) => `# TODO — ${name}\n\n## Active\n\n## Completed\n`;
