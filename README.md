@@ -502,6 +502,7 @@ Inspired by the [OpenClaw incident prevention framework](https://openagents.mom)
 | `fishi security <scan\|rules>` | Native SAST + OWASP vulnerability scanning |
 | `fishi patterns <list\|search\|select>` | Browse and select integration blueprints |
 | `fishi sandbox <status\|policy>` | Sandbox mode and policy info |
+| `fishi docker <build\|test\|run\|status>` | Docker sandbox — build image, run tests in container |
 | `fishi mcp add <name>` | Add MCP server |
 | `fishi reset [checkpoint]` | Rollback to a checkpoint |
 
@@ -651,6 +652,36 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.17.0</b> — Master Fix Batch (E2E Audit)</summary>
+
+14 fixes from comprehensive E2E audit on a real project (Todo + Note Management App — 5 sprints, 30+ commits, 120 source files).
+
+**Critical fixes:**
+- Checkpoint metadata no longer degrades to "unknown" — robust YAML parser
+- Monitor events no longer stop recording — fallback import path
+- Claude's native worktree branches now logged to `.fishi/state/worktree-log.yaml`
+- Orphaned worktrees detected and cleanup suggested on session start
+
+**Feature activation (things that existed but never triggered):**
+- Agent memory: HARD-GATE after each task forces memory recording
+- Sprint retrospective: HARD-GATE between sprints captures learnings
+- Design system auto-detect during architecture phase
+- Security scan mandatory before deployment (blocks on critical findings)
+- Model routing explicit in agent dispatch (Opus/Sonnet/Haiku)
+- Pre-merge conflict detection via git diff
+
+**New CLI commands:**
+- `fishi docker build` — build sandbox Docker image
+- `fishi docker test` — run tests inside Docker container
+- `fishi docker run` — execute commands in container
+- `fishi docker status` — show Docker + image status
+- `fishi upgrade` now regenerates CLAUDE.md with latest enforcement
+
+- 613 tests
+
+</details>
+
+<details>
 <summary><b>v0.16.0</b> — Orchestration Engine (Major Fix)</summary>
 
 **The Big Fix** — making every FISHI feature actually work. ([#23](https://github.com/kpkaranam/fishi/issues/23))
