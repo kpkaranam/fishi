@@ -71,6 +71,29 @@ The only framework that safely integrates with existing projects. Auto-detects y
 
 ---
 
+## Built with FISHI
+
+<table>
+<tr>
+<td width="100%">
+
+### Meld — Todo + Note Management App
+
+A full-stack productivity app built entirely by FISHI's 22+ AI agents — from discovery to deployment.
+
+**Stack:** React 18, Vite, Supabase, TanStack Query, Zustand, TipTap, Tailwind CSS
+
+**Pipeline:** Discovery → PRD (22 acceptance criteria) → Architecture → 5 Sprints → 120 source files → Production
+
+<a href="https://project-qkhag.vercel.app/"><img src="https://img.shields.io/badge/Live_Demo-▶_Try_it-06b6d4?style=for-the-badge" alt="Live Demo"></a>
+<a href="https://github.com/kpkaranam/meld"><img src="https://img.shields.io/badge/Source_Code-GitHub-333?style=for-the-badge&logo=github" alt="Source"></a>
+
+</td>
+</tr>
+</table>
+
+---
+
 ## What is FISHI?
 
 Most AI coding tools give you **one assistant**. FISHI gives you an **entire development team** — a master strategist, 4 team leads, 13+ specialist developers, a deep research agent, and domain-specific architects — all working in isolated sandboxed environments, submitting PRs, and tracking progress on a built-in project board.
