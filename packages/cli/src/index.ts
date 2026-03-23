@@ -16,6 +16,7 @@ import { designCommand } from './commands/design.js';
 import { securityCommand } from './commands/security.js';
 import { patternsCommand } from './commands/patterns.js';
 import { upgradeCommand } from './commands/upgrade.js';
+import { dockerCommand } from './commands/docker.js';
 
 const program = new Command();
 
@@ -26,7 +27,7 @@ program
       ' — AI-Powered Software Delivery Pipeline\n' +
       '   Autonomous AI development with human governance'
   )
-  .version('0.16.5');
+  .version('0.17.0');
 
 program
   .command('init')
@@ -131,5 +132,12 @@ program
   .command('upgrade')
   .description('Upgrade existing FISHI project to the latest version')
   .action(upgradeCommand);
+
+program
+  .command('docker')
+  .description('Docker sandbox — build image, run tests, execute commands in container')
+  .argument('<action>', 'Action: build | test | run | status')
+  .option('--dockerfile <path>', 'Custom Dockerfile path')
+  .action(dockerCommand);
 
 program.parse();
