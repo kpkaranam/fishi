@@ -185,7 +185,12 @@ try {
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'agent.completed', agent: agentName || 'unknown', data: { status: status || 'unknown', filesChanged: parsed.filesChanged ? parsed.filesChanged.length : 0, summary: summary || '', taskId: taskId || '' } });
-  } catch {}
+  } catch {
+    try {
+      const { emitMonitorEvent } = await import(new URL('file:///' + projectRoot.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href);
+      emitMonitorEvent(projectRoot, { type: 'agent.completed', agent: agentName || 'unknown', data: { status: status || 'unknown', filesChanged: parsed.filesChanged ? parsed.filesChanged.length : 0, summary: summary || '', taskId: taskId || '' } });
+    } catch {}
+  }
 } catch (err) {
   console.error(\`[FISHI] Agent complete hook error: \${err.message}\`);
   process.exit(0); // Non-fatal

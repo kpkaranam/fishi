@@ -21,7 +21,7 @@ import {
   getBoardCommand,
 } from '@qlucent/fishi-core';
 
-const CURRENT_VERSION = '0.16.0';
+const CURRENT_VERSION = '0.17.0';
 
 /**
  * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }
@@ -248,6 +248,48 @@ export async function upgradeCommand(): Promise<void> {
         updated.push('.claude/settings.json (added phase-guard hook)');
       }
     } catch {}
+  }
+
+  // 14. Regenerate CLAUDE.md with latest orchestration enforcement
+  const claudeMdPath = path.join(targetDir, '.claude', 'CLAUDE.md');
+  const rootClaudeMdPath = path.join(targetDir, 'CLAUDE.md');
+  if (fs.existsSync(claudeMdPath) || fs.existsSync(rootClaudeMdPath)) {
+    try {
+      // Read project info from fishi.yaml for template generation
+      const fishiYaml = fs.readFileSync(path.join(targetDir, '.fishi', 'fishi.yaml'), 'utf-8');
+      const nameMatch = fishiYaml.match(/name:\s*["']?(.+?)["']?\s*$/m);
+      const descMatch = fishiYaml.match(/description:\s*["']?(.+?)["']?\s*$/m);
+      const typeMatch = fishiYaml.match(/type:\s*(\w+)/m);
+
+      const { getClaudeMdTemplate } = await import('@qlucent/fishi-core');
+      const newClaudeMd = getClaudeMdTemplate({
+        projectName: nameMatch?.[1] || path.basename(targetDir),
+        projectDescription: descMatch?.[1] || 'FISHI-managed project',
+        projectType: (typeMatch?.[1] as any) || 'greenfield',
+      });
+
+      // Write to whichever location exists (prefer root for priority)
+      if (fs.existsSync(rootClaudeMdPath)) {
+        // For root CLAUDE.md, merge FISHI section at top (preserve user content below)
+        const { mergeClaudeMdTop } = await import('@qlucent/fishi-core');
+        const existing = fs.readFileSync(rootClaudeMdPath, 'utf-8');
+        const merged = mergeClaudeMdTop(existing, newClaudeMd);
+        fs.writeFileSync(rootClaudeMdPath, merged, 'utf-8');
+        updated.push('CLAUDE.md (orchestration enforcement updated)');
+      } else {
+        fs.writeFileSync(claudeMdPath, newClaudeMd, 'utf-8');
+        updated.push('.claude/CLAUDE.md (orchestration enforcement updated)');
+      }
+    } catch {
+      // Skip if template generation fails
+    }
+  }
+
+  // 15. Initialize worktree-log.yaml if missing
+  const worktreeLogPath = path.join(targetDir, '.fishi', 'state', 'worktree-log.yaml');
+  if (!fs.existsSync(worktreeLogPath)) {
+    fs.writeFileSync(worktreeLogPath, 'worktrees:\n', 'utf-8');
+    created.push('.fishi/state/worktree-log.yaml');
   }
 
   spinner.succeed('Upgrade complete');

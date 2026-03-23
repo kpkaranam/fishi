@@ -374,6 +374,7 @@ export async function generateScaffold(
   }));
   await write('.fishi/state/agent-registry.yaml', getAgentRegistryTemplate());
   await write('.fishi/state/file-locks.yaml', 'locks: []\n');
+  await write('.fishi/state/worktree-log.yaml', 'worktrees:\n');
   await write('.fishi/state/task-graph.yaml', 'tasks: []\ndependencies: []\n');
   await write('.fishi/state/gates.yaml', 'gates: []\n');
   await write('.fishi/state/monitor.json', JSON.stringify({

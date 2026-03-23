@@ -21,15 +21,23 @@ const treesDir = join(projectRoot, '.trees');
 
 /**
  * Minimal YAML key-value parser. Handles top-level scalar fields only.
- * Does not handle nested objects, arrays, or multi-line values.
+ * Supports quoted values (single/double), values containing colons,
+ * and extra whitespace. Returns defaults for missing fields.
  */
 function parseYamlSimple(content) {
   const result = {};
   for (const line of content.split('\\n')) {
+    // Only match top-level keys (no leading whitespace)
     const match = line.match(/^([\\w][\\w.-]*):\\s*(.*)$/);
     if (match) {
-      const [, key, value] = match;
-      result[key] = value.replace(/^['"]|['"]$/g, '').trim();
+      const [, key, rawValue] = match;
+      let value = rawValue.trim();
+      // Strip matching quotes (single or double)
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      result[key] = value;
     }
   }
   return result;
@@ -186,6 +194,82 @@ try {
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'session.started', agent: 'master-orchestrator', data: { phase, sprint, projectName, taskCounts } });
+  } catch {
+    try {
+      const { emitMonitorEvent } = await import(new URL('file:///' + projectRoot.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href);
+      emitMonitorEvent(projectRoot, { type: 'session.started', agent: 'master-orchestrator', data: { phase, sprint, projectName, taskCounts } });
+    } catch {}
+  }
+
+  // ── Log Claude's native worktrees ────────────────────────────────
+  try {
+    const { execSync: execWorktree } = await import('child_process');
+    const branches = execWorktree('git branch', { cwd: projectRoot, encoding: 'utf-8' }).trim().split('\\n');
+    const worktreeBranches = branches
+      .map(b => b.trim().replace(/^\\*?\\s*/, ''))
+      .filter(b => b.startsWith('worktree-agent-'));
+
+    if (worktreeBranches.length > 0) {
+      const { writeFileSync: writeLog, mkdirSync: mkdirLog, readFileSync: readLog, existsSync: existsLog } = await import('fs');
+      const logPath = join(projectRoot, '.fishi', 'state', 'worktree-log.yaml');
+      let existingLog = [];
+      if (existsLog(logPath)) {
+        const logContent = readLog(logPath, 'utf-8');
+        const entries = logContent.split('\\n  - branch:').slice(1);
+        existingLog = entries.map(e => {
+          const m = e.match(/\\s*["']?([^"'\\n]+)/);
+          return m ? m[1].trim() : '';
+        }).filter(Boolean);
+      }
+
+      const newBranches = worktreeBranches.filter(b => !existingLog.includes(b));
+      if (newBranches.length > 0) {
+        let yaml = existsLog(logPath) ? readLog(logPath, 'utf-8') : 'worktrees:\\n';
+        for (const branch of newBranches) {
+          let commitMsg = '';
+          try {
+            commitMsg = execWorktree(\`git log \${branch} -1 --format=%s\`, { cwd: projectRoot, encoding: 'utf-8' }).trim();
+          } catch {}
+          let merged = false;
+          try {
+            const mergedBranches = execWorktree('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
+            merged = mergedBranches.includes(branch);
+          } catch {
+            try {
+              const mergedBranches = execWorktree('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
+              merged = mergedBranches.includes(branch);
+            } catch {}
+          }
+          yaml += \`  - branch: "\${branch}"\\n\`;
+          yaml += \`    detected: "\${new Date().toISOString()}"\\n\`;
+          yaml += \`    status: "\${merged ? 'merged' : 'active'}"\\n\`;
+          yaml += \`    commit: "\${commitMsg.replace(/"/g, "'")}"\\n\`;
+        }
+        mkdirLog(join(projectRoot, '.fishi', 'state'), { recursive: true });
+        writeLog(logPath, yaml, 'utf-8');
+        console.log(\`[FISHI] Worktree branches logged: \${newBranches.length} new, \${existingLog.length} existing\`);
+      }
+
+      // Warn about orphaned worktrees (merged but not cleaned)
+      const orphaned = worktreeBranches.filter(b => {
+        try {
+          const merged = execWorktree('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
+          return merged.includes(b);
+        } catch {
+          try {
+            const merged = execWorktree('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
+            return merged.includes(b);
+          } catch { return false; }
+        }
+      });
+      if (orphaned.length > 0) {
+        console.log(\`[FISHI] Warning: \${orphaned.length} merged worktree branch(es) can be cleaned up:\`);
+        for (const b of orphaned.slice(0, 5)) {
+          console.log(\`  git branch -d \${b}\`);
+        }
+        if (orphaned.length > 5) console.log(\`  ... and \${orphaned.length - 5} more\`);
+      }
+    }
   } catch {}
 } catch (err) {
   console.error(\`[FISHI] Session start hook error: \${err.message}\`);

@@ -104,6 +104,20 @@ Use the Agent tool with:
            Include: Executive Summary, Key Findings, Recommendations, Sources"
 \`\`\`
 
+### Model Selection
+When dispatching agents via the Agent tool, respect the model specified in their definition:
+- **Opus**: master-orchestrator, deep-research-agent, architect-agent (critical thinking)
+- **Sonnet**: dev-lead, backend-agent, frontend-agent, testing-agent (routine dev work)
+- **Haiku**: docs-agent (documentation, simple tasks)
+
+Specify the model parameter when dispatching:
+\`\`\`
+Use the Agent tool with:
+  model: "sonnet"  (or "opus" for critical agents)
+  subagent_type: "backend-agent"
+  prompt: "..."
+\`\`\`
+
 ### Dispatch Coordinator
 \`\`\`
 Use the Agent tool with:
@@ -170,9 +184,18 @@ Do NOT proceed until user explicitly approves.
 - **Actions**:
   1. Dispatch architect-agent to design the system
   2. Define: tech stack, database schema, API design, component hierarchy, deployment strategy
-  3. Select integration patterns: \`node .fishi/scripts/patterns.mjs\` (if patterns selected during init)
-  4. Save to \`.fishi/plans/architecture/\`
-  5. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase architecture\`
+  3. Detect design system: If the project has a frontend, analyze design tokens:
+     \`\`\`bash
+     npx @qlucent/fishi design detect
+     \`\`\`
+     If no tokens found, initialize with defaults:
+     \`\`\`bash
+     npx @qlucent/fishi design init
+     \`\`\`
+     Save to \`.fishi/design-system.json\` — frontend agents will reference this.
+  4. Select integration patterns: \`node .fishi/scripts/patterns.mjs\` (if patterns selected during init)
+  5. Save to \`.fishi/plans/architecture/\`
+  6. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase architecture\`
 
 <HARD-GATE>
 STOP. Present architecture to user. Ask: "Approve architecture to proceed to Sprint Planning?"
@@ -206,17 +229,47 @@ STOP. Present sprint plan to user. Ask: "Approve sprint plan to start developmen
   6. **Quality review**: Dispatch quality-lead to review the worktree code
   7. **Update board**: Move task to Review → Done
   8. **Release locks**: \`node .fishi/scripts/file-lock-hook.mjs release --agent {agent-name} --task {task-slug}\`
+  6b. **Check for merge conflicts** before merging:
+      \`\`\`bash
+      git diff master...{worktree-branch} --stat
+      \`\`\`
+      If conflicts detected, resolve them in the worktree before merging.
   9. **Record learnings**: \`node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent-name} --domain {domain} --practice "{what was learned}"\`
-  10. **Update memory**: \`node .fishi/scripts/memory-manager.mjs write --agent {agent-name} --key {key} --value "{value}"\`
+  10. **Update agent memory**: After EVERY completed task, the agent MUST record what it learned:
+      \`\`\`bash
+      node .fishi/scripts/memory-manager.mjs write --agent {agent-name} --key {task-slug} --value "{summary of what was done and decisions made}"
+      \`\`\`
+  11. **Update project context**: After every sprint completion:
+      \`\`\`bash
+      # Update project-context.md with current state
+      \`\`\`
+      Write to \`.fishi/memory/project-context.md\` the current tech stack, completed features, active sprint, and key decisions.
+
+<HARD-GATE>
+STOP before starting the next sprint. Run a sprint retrospective:
+1. Record mistakes: \`node .fishi/scripts/learnings-manager.mjs add-mistake --agent {agent} --domain {domain} --mistake "{what went wrong}" --fix "{how it was fixed}" --lesson "{what to do differently}"\`
+2. Record best practices: \`node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent} --domain {domain} --practice "{what worked well}"\`
+3. Update project context memory with current state
+4. Present sprint summary to user
+Ask: "Sprint {N} complete. Approve to start Sprint {N+1}?"
+</HARD-GATE>
 
 ### Phase 6: Deployment
 - **Allowed**: CI/CD setup, deployment configs, documentation
 - **Owner**: ops-lead
 - **Actions**:
   1. Dispatch devops-agent for CI/CD setup
-  2. Dispatch docs-agent for documentation
-  3. Run security scan: \`npx @qlucent/fishi security scan\`
-  4. Run design validation: \`npx @qlucent/fishi design validate\`
+  2. **Run security scan** (mandatory):
+     \`\`\`bash
+     npx @qlucent/fishi security scan -o .fishi/security-report.md
+     \`\`\`
+     If critical or high findings: STOP. Fix security issues before deployment.
+     If only medium/low: note in deployment plan, proceed with caution.
+  3. **Run design validation**:
+     \`\`\`bash
+     npx @qlucent/fishi design validate
+     \`\`\`
+  4. Dispatch docs-agent for documentation
   5. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase deployment\`
 
 <HARD-GATE>

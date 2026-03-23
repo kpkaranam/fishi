@@ -22,14 +22,23 @@ const treesDir = join(projectRoot, '.trees');
 
 /**
  * Minimal YAML key-value parser for top-level scalar fields.
+ * Handles quoted values (single/double), values containing colons,
+ * and extra whitespace. Returns defaults for missing fields.
  */
 function parseYamlSimple(content) {
   const result = {};
   for (const line of content.split('\\n')) {
+    // Only match top-level keys (no leading whitespace)
     const match = line.match(/^([\\w][\\w.-]*):\\s*(.*)$/);
     if (match) {
-      const [, key, value] = match;
-      result[key] = value.replace(/^['"]|['"]$/g, '').trim();
+      const [, key, rawValue] = match;
+      let value = rawValue.trim();
+      // Strip matching quotes (single or double)
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      result[key] = value;
     }
   }
   return result;
@@ -241,7 +250,12 @@ try {
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
     emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
-  } catch {}
+  } catch {
+    try {
+      const { emitMonitorEvent } = await import(new URL('file:///' + projectRoot.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href);
+      emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
+    } catch {}
+  }
 } catch (err) {
   console.error(\`[FISHI] Auto-checkpoint error: \${err.message}\`);
   process.exit(0); // Non-fatal
