@@ -495,15 +495,19 @@ console.log(\`\${PREFIX} Checking pipeline consistency...\`);
 let pipelineValid = true;
 const phases = ['discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment'];
 
-// Check CLAUDE.md references all 6 phases
+// Check CLAUDE.md or .claude/rules/pipeline.md references all 6 phases
 const claudeMd = readText('.claude/CLAUDE.md');
-if (claudeMd) {
+const pipelineRules = readText('.claude/rules/pipeline.md');
+const pipelineSource = claudeMd || '';
+const pipelineRulesSource = pipelineRules || '';
+const combinedPipelineText = (pipelineSource + ' ' + pipelineRulesSource).toLowerCase();
+if (claudeMd || pipelineRules) {
   for (const phase of phases) {
     // Allow underscore or hyphen or space variants
     const variants = [phase, phase.replace('_', '-'), phase.replace('_', ' ')];
-    const found = variants.some(v => claudeMd.toLowerCase().includes(v));
+    const found = variants.some(v => combinedPipelineText.includes(v));
     if (!found) {
-      fail(\`CLAUDE.md does not reference phase: \${phase}\`);
+      fail(\`CLAUDE.md/rules do not reference phase: \${phase}\`);
       pipelineValid = false;
     }
   }

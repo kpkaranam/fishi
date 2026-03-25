@@ -73,6 +73,11 @@ import { getDocCheckerScript } from '../templates/hooks/doc-checker.js';
 import { getMonitorEmitterScript } from '../templates/hooks/monitor-emitter.js';
 import { getFileLockHookScript } from '../templates/hooks/file-lock-hook.js';
 import { getPhaseGuardHook } from '../templates/hooks/phase-guard.js';
+import { getWorktreeHooksScript } from '../templates/hooks/worktree-hooks.js';
+import { getTaskCompletedHook } from '../templates/hooks/task-completed-hook.js';
+import { getSessionEndHook } from '../templates/hooks/session-end-hook.js';
+import { getFailureLoggerHook } from '../templates/hooks/failure-logger.js';
+import { getStatuslineScript } from '../templates/configs/statusline.js';
 
 // Command templates
 import { getInitCommand } from '../templates/commands/init-command.js';
@@ -83,6 +88,12 @@ import { getBoardCommand } from '../templates/commands/board-command.js';
 import { getSprintCommand } from '../templates/commands/sprint-command.js';
 import { getResetCommand } from '../templates/commands/reset-command.js';
 import { getPrdCommand } from '../templates/commands/prd-command.js';
+
+// Rule templates
+import { getPipelineRules } from '../templates/rules/pipeline.js';
+import { getDelegationRules } from '../templates/rules/delegation.js';
+import { getSafetyRules } from '../templates/rules/safety.js';
+import { getConventionsRules } from '../templates/rules/conventions.js';
 
 // Config templates
 import { getFishiYamlTemplate } from '../templates/configs/fishi-yaml.js';
@@ -172,6 +183,7 @@ export async function generateScaffold(
     '.claude/skills/adaptive-taskgraph',
     '.claude/skills/documentation',
     '.claude/skills/deep-research',
+    '.claude/rules',
     '.claude/commands',
     'docs',
     '.fishi/plans/prd',
@@ -278,7 +290,12 @@ export async function generateScaffold(
   await write('.fishi/scripts/monitor-emitter.mjs', getMonitorEmitterScript());
   await write('.fishi/scripts/file-lock-hook.mjs', getFileLockHookScript());
   await write('.fishi/scripts/phase-guard.mjs', getPhaseGuardHook());
-  const hookCount = 18;
+  await write('.fishi/scripts/worktree-hooks.mjs', getWorktreeHooksScript());
+  await write('.fishi/scripts/task-completed-hook.mjs', getTaskCompletedHook());
+  await write('.fishi/scripts/session-end-hook.mjs', getSessionEndHook());
+  await write('.fishi/scripts/failure-logger.mjs', getFailureLoggerHook());
+  await write('.fishi/scripts/fishi-statusline.mjs', getStatuslineScript());
+  const hookCount = 23;
 
   // ── Initial TODO Files ─────────────────────────────────────────────
   const todoTemplate = (name: string) => `# TODO — ${name}\n\n## Active\n\n## Completed\n`;
@@ -357,6 +374,12 @@ export async function generateScaffold(
   } else {
     await write('.claude/CLAUDE.md', claudeMdContent, 'claude-md');
   }
+
+  // Rules directory — split context by concern
+  await write('.claude/rules/pipeline.md', getPipelineRules());
+  await write('.claude/rules/delegation.md', getDelegationRules());
+  await write('.claude/rules/safety.md', getSafetyRules());
+  await write('.claude/rules/conventions.md', getConventionsRules(options.projectType, options.brownfieldAnalysis));
 
   // .mcp.json
   const mcpContent = getMcpJsonTemplate();

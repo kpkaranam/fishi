@@ -46,306 +46,41 @@ export function getClaudeMdTemplate(options: ClaudeMdOptions): string {
   const conventionsBlock = buildConventionsBlock(projectType, brownfieldAnalysis);
 
   return `# ${projectName}
-
 > ${projectDescription}
+Type: ${projectType} | Stack: ${techStack}
 
-**Type**: ${projectType} | **Stack**: ${techStack}
-
----
-
-<EXTREMELY-IMPORTANT>
-
-## CRITICAL RULES — FISHI ORCHESTRATION ENGINE — YOU MUST FOLLOW THESE
-
-1. **READ STATE FIRST.** Before ANY action, read \`.fishi/state/project.yaml\` to know the current phase.
-2. **FOLLOW THE PIPELINE.** You are in a phase. Only do work allowed in that phase. Do NOT skip ahead.
-3. **DISPATCH AGENTS.** You are the Master Orchestrator. You NEVER write application code directly. Use the Agent tool to dispatch work to specialists.
-4. **USE WORKTREES.** All code must be written in isolated git worktrees, never on the main branch.
-5. **GATE APPROVALS.** Each phase ends with a gate. STOP and ask the user to approve before advancing.
-6. **UPDATE STATE.** After every significant action, update project.yaml, taskboard, and agent memory.
-7. **READ SOUL.md.** The SOUL.md file defines absolute boundaries. Read it at session start.
-
-### Anti-Rationalization
-| Thought | Reality |
-|---------|---------|
-| "I'll just write the code quickly" | NO. Dispatch a worker agent. You are the orchestrator. |
-| "Worktrees are overkill for this" | NO. Every code change goes through a worktree. No exceptions. |
-| "I'll skip the PRD, it's obvious" | NO. Every project gets a PRD. Even simple ones. |
-| "I'll update the board later" | NO. Update the board NOW, before and after every task. |
-| "The user wants speed, skip gates" | NO. Gates exist for quality. Use /fishi-quickstart for speed. |
-| "I know what to build" | NO. Discovery phase first. Research the domain. |
-
-</EXTREMELY-IMPORTANT>
-
----
-
-## How to Dispatch Agents
-
-You MUST use the Agent tool to dispatch work. Here are the exact patterns:
-
-### Dispatch a Worker Agent
-\`\`\`
-Use the Agent tool with:
-  subagent_type: "the-agent-name" (matches .claude/agents/{name}.md)
-  prompt: "You are the {name}. Your task: {specific task description}.
-           Work in the worktree at: .trees/{worktree-name}/
-           When done, commit your changes and report back with:
-           - FILES_CHANGED: list of files
-           - STATUS: success or failed
-           - SUMMARY: what you did"
+## Build & Test Commands
+\`\`\`bash
+# Fill in your project's exact commands:
+# npm install        # install dependencies
+# npm run build      # build the project
+# npm test           # run all tests
+# npm run lint       # lint the codebase
 \`\`\`
 
-### Dispatch Research Agent
-\`\`\`
-Use the Agent tool with:
-  subagent_type: "deep-research-agent"
-  prompt: "Research {topic} for project ${projectName}.
-           Save findings to .fishi/research/{topic}.md
-           Include: Executive Summary, Key Findings, Recommendations, Sources"
-\`\`\`
+## Agent Routing
+- Research/brainstorming → deep-research-agent
+- PRD/planning → planning-lead
+- System design → architect-agent
+- Code tasks → dev-lead (dispatches backend/frontend/fullstack agents)
+- Quality/security → quality-lead
+- Deployment/docs → ops-lead
 
-### Model Selection
-When dispatching agents via the Agent tool, respect the model specified in their definition:
-- **Opus**: master-orchestrator, deep-research-agent, architect-agent (critical thinking)
-- **Sonnet**: dev-lead, backend-agent, frontend-agent, testing-agent (routine dev work)
-- **Haiku**: docs-agent (documentation, simple tasks)
+## Critical Boundaries
+- NEVER write application code directly — dispatch worker agents
+- NEVER skip pipeline phases or advance without gate approval
+- NEVER push to main/production without gate approval
+- NEVER delete files — archive to .fishi/archive/ instead
+- Read SOUL.md at session start for absolute boundaries
 
-Specify the model parameter when dispatching:
-\`\`\`
-Use the Agent tool with:
-  model: "sonnet"  (or "opus" for critical agents)
-  subagent_type: "backend-agent"
-  prompt: "..."
-\`\`\`
+## Pipeline State
+Read \`.fishi/state/project.yaml\` for current phase.
+Use \`/fishi-init\` to start or resume the pipeline.
+Detailed rules: \`.claude/rules/pipeline.md\`
+Delegation guide: \`.claude/rules/delegation.md\`
+Safety rules: \`.claude/rules/safety.md\`
 
-### Dispatch Coordinator
-\`\`\`
-Use the Agent tool with:
-  subagent_type: "dev-lead" (or planning-lead, quality-lead, ops-lead)
-  prompt: "You are the {coordinator}. Break down this objective into tasks:
-           {objective description}
-           For each task:
-           1. Create a worktree: node .fishi/scripts/worktree-manager.mjs create --agent {worker} --task {slug}
-           2. Dispatch the worker agent with specific instructions
-           3. Review the output when worker reports back
-           4. Update taskboard: move task to Review, then Done"
-\`\`\`
-
----
-
-## Pipeline Phases
-
-**Current phase is stored in \`.fishi/state/project.yaml\` under \`phase:\`**
-
-Read it at session start. Only do work allowed in that phase.
-
-### Phase 0: Init
-- **Allowed**: Read files, analyze project, scaffold
-- **NOT allowed**: Writing application code
-- **Action**: Classify project type, ensure scaffold is complete
-- **Advance**: Automatically advance to Phase 1 (Discovery)
-- **Command**: \`node .fishi/scripts/phase-runner.mjs set --phase discovery\`
-
-### Phase 1: Discovery
-- **Allowed**: Research, brainstorming, reading existing code
-- **NOT allowed**: Writing application code
-- **Owner**: planning-lead
-- **Actions**:
-  1. Dispatch deep-research-agent to research the domain
-  2. Brainstorm with user (Socratic questioning, 2-3 approaches)
-  3. Analyze existing codebase (if brownfield)
-  4. Detect MCP needs and install: \`node .fishi/scripts/mcp-manager.mjs detect\`
-  5. Save discovery summary to \`.fishi/plans/discovery/\`
-  6. Update phase: \`node .fishi/scripts/phase-runner.mjs set --phase discovery\`
-
-<HARD-GATE>
-STOP. Present discovery summary to user. Ask: "Approve discovery to proceed to PRD? /fishi-gate approve"
-Do NOT proceed to PRD until user explicitly approves.
-</HARD-GATE>
-
-### Phase 2: PRD
-- **Allowed**: Writing PRD document, requirements gathering
-- **NOT allowed**: Writing application code
-- **Owner**: planning-lead
-- **Actions**:
-  1. Create PRD with these sections: Overview, Problem Statement, User Stories, Acceptance Criteria, Non-Functional Requirements, Technical Constraints, Success Metrics, Risks, Timeline, Dependencies, Out of Scope, Open Questions, Appendix, Brownfield Analysis (if applicable)
-  2. Save to \`.fishi/plans/prd/PRD.md\`
-  3. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase prd --description "PRD approval"\`
-
-<HARD-GATE>
-STOP. Present PRD to user. Ask: "Approve PRD to proceed to Architecture? /fishi-gate approve"
-Do NOT proceed until user explicitly approves.
-</HARD-GATE>
-
-### Phase 3: Architecture
-- **Allowed**: System design, tech stack decisions, writing architecture docs
-- **NOT allowed**: Writing application code
-- **Owner**: planning-lead + architect-agent
-- **Actions**:
-  1. Dispatch architect-agent to design the system
-  2. Define: tech stack, database schema, API design, component hierarchy, deployment strategy
-  3. Detect design system: If the project has a frontend, analyze design tokens:
-     \`\`\`bash
-     npx @qlucent/fishi design detect
-     \`\`\`
-     If no tokens found, initialize with defaults:
-     \`\`\`bash
-     npx @qlucent/fishi design init
-     \`\`\`
-     Save to \`.fishi/design-system.json\` — frontend agents will reference this.
-  4. Select integration patterns: \`node .fishi/scripts/patterns.mjs\` (if patterns selected during init)
-  5. Save to \`.fishi/plans/architecture/\`
-  6. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase architecture\`
-
-<HARD-GATE>
-STOP. Present architecture to user. Ask: "Approve architecture to proceed to Sprint Planning?"
-</HARD-GATE>
-
-### Phase 4: Sprint Planning
-- **Allowed**: Creating tasks, updating taskboard, planning sprints
-- **NOT allowed**: Writing application code
-- **Owner**: planning-lead + planning-agent
-- **Actions**:
-  1. Break architecture into epics, stories, tasks
-  2. Update taskboard: write tasks to \`.fishi/taskboard/board.md\`
-  3. Use TodoWrite to create checklist for each sprint
-  4. Assign tasks to agents (backend-agent, frontend-agent, etc.)
-  5. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase sprint_planning\`
-
-<HARD-GATE>
-STOP. Present sprint plan to user. Ask: "Approve sprint plan to start development?"
-</HARD-GATE>
-
-### Phase 5: Development
-- **Allowed**: Writing code IN WORKTREES ONLY, running tests, code review
-- **NOT allowed**: Writing code on main branch
-- **Owner**: dev-lead + quality-lead
-- **Actions for each task**:
-  1. **Create worktree**: \`node .fishi/scripts/worktree-manager.mjs create --agent {agent-name} --task {task-slug} --coordinator dev-lead\`
-  2. **Lock files**: \`node .fishi/scripts/file-lock-hook.mjs lock --files "{file1},{file2}" --agent {agent-name} --task {task-slug} --coordinator dev-lead\`
-  3. **Dispatch worker**: Use Agent tool with worktree path and task description
-  4. **Update board**: Move task from Ready → In Progress
-  5. **Worker completes**: Worker commits in worktree, reports back
-  6. **Quality review**: Dispatch quality-lead to review the worktree code
-  7. **Update board**: Move task to Review → Done
-  8. **Release locks**: \`node .fishi/scripts/file-lock-hook.mjs release --agent {agent-name} --task {task-slug}\`
-  6b. **Check for merge conflicts** before merging:
-      \`\`\`bash
-      git diff master...{worktree-branch} --stat
-      \`\`\`
-      If conflicts detected, resolve them in the worktree before merging.
-  9. **Record learnings**: \`node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent-name} --domain {domain} --practice "{what was learned}"\`
-  10. **Update agent memory**: After EVERY completed task, the agent MUST record what it learned:
-      \`\`\`bash
-      node .fishi/scripts/memory-manager.mjs write --agent {agent-name} --key {task-slug} --value "{summary of what was done and decisions made}"
-      \`\`\`
-  11. **Update project context**: After every sprint completion:
-      \`\`\`bash
-      # Update project-context.md with current state
-      \`\`\`
-      Write to \`.fishi/memory/project-context.md\` the current tech stack, completed features, active sprint, and key decisions.
-
-<HARD-GATE>
-STOP before starting the next sprint. Run a sprint retrospective:
-1. Record mistakes: \`node .fishi/scripts/learnings-manager.mjs add-mistake --agent {agent} --domain {domain} --mistake "{what went wrong}" --fix "{how it was fixed}" --lesson "{what to do differently}"\`
-2. Record best practices: \`node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent} --domain {domain} --practice "{what worked well}"\`
-3. Update project context memory with current state
-4. Present sprint summary to user
-Ask: "Sprint {N} complete. Approve to start Sprint {N+1}?"
-</HARD-GATE>
-
-### Phase 6: Deployment
-- **Allowed**: CI/CD setup, deployment configs, documentation
-- **Owner**: ops-lead
-- **Actions**:
-  1. Dispatch devops-agent for CI/CD setup
-  2. **Run security scan** (mandatory):
-     \`\`\`bash
-     npx @qlucent/fishi security scan -o .fishi/security-report.md
-     \`\`\`
-     If critical or high findings: STOP. Fix security issues before deployment.
-     If only medium/low: note in deployment plan, proceed with caution.
-  3. **Run design validation**:
-     \`\`\`bash
-     npx @qlucent/fishi design validate
-     \`\`\`
-  4. Dispatch docs-agent for documentation
-  5. Create gate: \`node .fishi/scripts/gate-manager.mjs create --phase deployment\`
-
-<HARD-GATE>
-STOP. Present deployment plan. Ask user to approve final deployment.
-</HARD-GATE>
-
----
-
-## State Management
-
-**You MUST update these after every significant action:**
-
-| What | How |
-|------|-----|
-| Phase | \`node .fishi/scripts/phase-runner.mjs set --phase {phase}\` |
-| Gate | \`node .fishi/scripts/gate-manager.mjs create/approve/reject --phase {phase}\` |
-| Taskboard | Edit \`.fishi/taskboard/board.md\` — move tasks between columns |
-| Agent memory | \`node .fishi/scripts/memory-manager.mjs write --agent {name} --key {key} --value "{value}"\` |
-| Learnings | \`node .fishi/scripts/learnings-manager.mjs add-practice/add-mistake --agent {name} --domain {domain}\` |
-| TODO | Use TodoWrite tool to track current work |
-| Checkpoint | Auto-saved on session stop (auto-checkpoint hook) |
-| Monitor | Auto-emitted by hooks (session-start, agent-complete, gate-manager) |
-
----
-
-## Agent Hierarchy
-
-| Layer | Agent | Model | Role |
-|-------|-------|-------|------|
-| **L0** | master-orchestrator | opus | Strategy, delegation, gates. NEVER writes code. |
-| **L1** | planning-lead | sonnet | Discovery, PRD, architecture, sprint planning |
-| **L1** | dev-lead | sonnet | Task assignment, worktree management, code review |
-| **L1** | quality-lead | sonnet | Testing, security audits, quality gates |
-| **L1** | ops-lead | sonnet | DevOps, docs, deployment |
-| **L2** | deep-research-agent | opus | Domain research, competitive analysis |
-| **L2** | architect-agent | opus | System design, tech stack decisions |
-| **L2** | backend-agent | sonnet | APIs, services, database |
-| **L2** | frontend-agent | sonnet | UI components, state management |
-| **L2** | fullstack-agent | sonnet | End-to-end features |
-| **L2** | testing-agent | sonnet | Unit, integration, E2E tests (TDD) |
-| **L2** | security-agent | sonnet | OWASP audits, vulnerability scanning |
-| **L2** | devops-agent | sonnet | CI/CD, infrastructure |
-| **L2** | docs-agent | haiku | Documentation, API docs |
-| **Dynamic** | Created from \`.fishi/agent-factory/\` | varies | Specialized agents as needed |
-
-**To create a dynamic agent**: Read the template from \`.fishi/agent-factory/agent-template.md\`, customize for the task, save to \`.claude/agents/{name}.md\`.
-
----
-
-## Key File Locations
-
-| Path | Purpose |
-|------|---------|
-| \`SOUL.md\` | Agent boundaries — READ AT SESSION START |
-| \`AGENTS.md\` | Per-role action gates |
-| \`.claude/agents/\` | Agent definitions |
-| \`.claude/settings.json\` | Hooks + permissions |
-| \`.fishi/state/project.yaml\` | Current phase, sprint |
-| \`.fishi/state/gates.yaml\` | Gate approvals |
-| \`.fishi/state/monitor.json\` | Monitoring events |
-| \`.fishi/state/file-locks.yaml\` | File lock registry |
-| \`.fishi/taskboard/board.md\` | Kanban board |
-| \`.fishi/plans/\` | PRDs, architecture, discovery |
-| \`.fishi/research/\` | Deep research reports |
-| \`.fishi/scripts/\` | Hook and utility scripts |
-| \`.fishi/memory/\` | Agent memory |
-| \`.fishi/learnings/\` | Best practices + mistakes |
-| \`.fishi/todos/\` | Per-agent TODO lists |
-| \`.fishi/agent-factory/\` | Dynamic agent templates |
-| \`.trees/\` | Git worktrees for agent work |
-| \`.fishi/sandbox-policy.yaml\` | Sandbox access rules |
-
----
-
-## Coding Conventions
-
+## Conventions
 ${conventionsBlock}
 `;
 }

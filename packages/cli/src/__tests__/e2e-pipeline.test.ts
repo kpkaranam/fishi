@@ -114,7 +114,7 @@ describe('E2E Pipeline Tests', () => {
       expect(mcp.mcpServers).toBeDefined();
 
       const claudeMd = readFileSync(join(projectDir, '.claude', 'CLAUDE.md'), 'utf-8');
-      expect(claudeMd).toContain('FISHI');
+      expect(claudeMd).toContain('Pipeline State');
     });
   });
 

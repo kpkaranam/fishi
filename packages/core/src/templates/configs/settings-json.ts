@@ -12,6 +12,17 @@ export function getSettingsJsonTemplate(): string {
           ],
         },
       ],
+      SessionEnd: [
+        {
+          matcher: "",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/session-end-hook.mjs",
+            },
+          ],
+        },
+      ],
       Stop: [
         {
           matcher: "",
@@ -65,10 +76,58 @@ export function getSettingsJsonTemplate(): string {
           ],
         },
       ],
+      PostToolUseFailure: [
+        {
+          matcher: "",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/failure-logger.mjs",
+            },
+          ],
+        },
+      ],
+      WorktreeCreate: [
+        {
+          matcher: "",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/worktree-hooks.mjs",
+            },
+          ],
+        },
+      ],
+      WorktreeRemove: [
+        {
+          matcher: "",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/worktree-hooks.mjs",
+            },
+          ],
+        },
+      ],
+      TaskCompleted: [
+        {
+          matcher: "",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/task-completed-hook.mjs",
+            },
+          ],
+        },
+      ],
+    },
+    statusLine: {
+      type: "command",
+      command: "node .fishi/scripts/fishi-statusline.mjs",
     },
     permissions: {
       allow: [
-        // Core tools — always allowed
+        // Core tools
         "Read",
         "Write",
         "Edit",
@@ -93,7 +152,7 @@ export function getSettingsJsonTemplate(): string {
         // Git operations
         "Bash(git *)",
 
-        // File system (read/navigate)
+        // File system
         "Bash(cat *)",
         "Bash(ls *)",
         "Bash(find *)",
@@ -143,11 +202,11 @@ export function getSettingsJsonTemplate(): string {
         "Bash(docker *)",
         "Bash(docker-compose *)",
 
-        // General catch-all for Bash (safety-check.mjs guards dangerous commands)
+        // General catch-all (safety-check.mjs guards dangerous commands)
         "Bash(*)",
       ],
       deny: [
-        // Destructive filesystem operations
+        // Destructive filesystem
         "Bash(rm -rf /)",
         "Bash(rm -rf /*)",
         "Bash(rm -rf ~)",

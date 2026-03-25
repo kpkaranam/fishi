@@ -17,6 +17,10 @@ import {
   getDocCheckerScript,
   getMonitorEmitterScript,
   getPhaseGuardHook,
+  getWorktreeHooksScript,
+  getTaskCompletedHook,
+  getSessionEndHook,
+  getFailureLoggerHook,
 } from '../index';
 
 describe('Hook / Script Templates', () => {
@@ -38,10 +42,14 @@ describe('Hook / Script Templates', () => {
     ['doc-checker', getDocCheckerScript],
     ['monitor-emitter', getMonitorEmitterScript],
     ['phase-guard', getPhaseGuardHook],
+    ['worktree-hooks', getWorktreeHooksScript],
+    ['task-completed-hook', getTaskCompletedHook],
+    ['session-end-hook', getSessionEndHook],
+    ['failure-logger', getFailureLoggerHook],
   ];
 
-  it('all 17 hooks are accounted for', () => {
-    expect(hooks).toHaveLength(17);
+  it('all 21 hooks are accounted for', () => {
+    expect(hooks).toHaveLength(21);
   });
 
   it.each(hooks)('%s returns a non-empty string', (_name, hookFn) => {

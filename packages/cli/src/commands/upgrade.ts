@@ -285,7 +285,18 @@ export async function upgradeCommand(): Promise<void> {
     }
   }
 
-  // 15. Initialize worktree-log.yaml if missing
+  // 15. Regenerate .claude/rules/ directory
+  const rulesDir = path.join(targetDir, '.claude', 'rules');
+  if (!fs.existsSync(rulesDir)) fs.mkdirSync(rulesDir, { recursive: true });
+
+  const { getPipelineRules, getDelegationRules, getSafetyRules, getConventionsRules } = await import('@qlucent/fishi-core');
+  fs.writeFileSync(path.join(rulesDir, 'pipeline.md'), getPipelineRules(), 'utf-8');
+  fs.writeFileSync(path.join(rulesDir, 'delegation.md'), getDelegationRules(), 'utf-8');
+  fs.writeFileSync(path.join(rulesDir, 'safety.md'), getSafetyRules(), 'utf-8');
+  fs.writeFileSync(path.join(rulesDir, 'conventions.md'), getConventionsRules('greenfield'), 'utf-8');
+  updated.push('.claude/rules/ (pipeline, delegation, safety, conventions)');
+
+  // 16. Initialize worktree-log.yaml if missing
   const worktreeLogPath = path.join(targetDir, '.fishi', 'state', 'worktree-log.yaml');
   if (!fs.existsSync(worktreeLogPath)) {
     fs.writeFileSync(worktreeLogPath, 'worktrees:\n', 'utf-8');
