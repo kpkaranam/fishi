@@ -99,6 +99,10 @@ export {
   getMonitorEmitterScript,
   getFileLockHookScript,
   getPhaseGuardHook,
+  getWorktreeHooksScript,
+  getTaskCompletedHook,
+  getSessionEndHook,
+  getFailureLoggerHook,
 } from './templates/hooks/index';
 
 // Command templates
@@ -132,6 +136,9 @@ export type {
   ProjectYamlOptions,
 } from './templates/configs/index';
 
+// Rule templates
+export { getPipelineRules, getDelegationRules, getSafetyRules, getConventionsRules } from './templates/rules/index';
+
 // Factory templates
 export {
   getAgentFactoryTemplate,
@@ -163,6 +170,7 @@ export { getDockerfileTemplate } from './templates/docker/Dockerfile';
 export { getDashboardHtml } from './templates/dashboard/index-html';
 export { getPermissionsForRole, getAllPermissionSummary, generatePermissionBlock } from './generators/index';
 export type { AgentRole as AgentPermissionRole, AgentPermissionSet } from './generators/index';
+export { getStatuslineScript, getStatuslineConfig } from './templates/configs/statusline';
 export { getSoulMdTemplate } from './templates/configs/soul-md';
 export { getAgentsMdTemplate } from './templates/configs/agents-md';
 export { runSecurityScan, generateSecurityReport, getScanRules } from './generators/index';

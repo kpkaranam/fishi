@@ -16,3 +16,7 @@ export { getDocCheckerScript } from './doc-checker';
 export { getMonitorEmitterScript } from './monitor-emitter';
 export { getFileLockHookScript } from './file-lock-hook';
 export { getPhaseGuardHook } from './phase-guard';
+export { getWorktreeHooksScript } from './worktree-hooks';
+export { getTaskCompletedHook } from './task-completed-hook';
+export { getSessionEndHook } from './session-end-hook';
+export { getFailureLoggerHook } from './failure-logger';
