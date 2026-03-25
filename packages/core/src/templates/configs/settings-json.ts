@@ -123,7 +123,7 @@ export function getSettingsJsonTemplate(): string {
     },
     statusLine: {
       type: "command",
-      command: "node .fishi/scripts/fishi-statusline.mjs",
+      command: "node .fishi/scripts/fishi-statusline.js",
     },
     permissions: {
       allow: [

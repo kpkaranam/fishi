@@ -294,7 +294,7 @@ export async function generateScaffold(
   await write('.fishi/scripts/task-completed-hook.mjs', getTaskCompletedHook());
   await write('.fishi/scripts/session-end-hook.mjs', getSessionEndHook());
   await write('.fishi/scripts/failure-logger.mjs', getFailureLoggerHook());
-  await write('.fishi/scripts/fishi-statusline.mjs', getStatuslineScript());
+  await write('.fishi/scripts/fishi-statusline.js', getStatuslineScript());
   const hookCount = 23;
 
   // ── Initial TODO Files ─────────────────────────────────────────────
