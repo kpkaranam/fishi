@@ -9,8 +9,9 @@ export function getSessionStartHook(): string {
   return `#!/usr/bin/env node
 // session-start.mjs — FISHI session start hook
 // Zero dependencies: uses only Node.js built-ins
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 
 const projectRoot = process.env.FISHI_PROJECT_ROOT || process.cwd();
 const stateFile = join(projectRoot, '.fishi', 'state', 'project.yaml');
@@ -41,6 +42,23 @@ function parseYamlSimple(content) {
     }
   }
   return result;
+}
+
+/**
+ * Robust field extractor — tries multiple patterns to handle format drift.
+ * Works even when project.yaml gets modified with different quoting styles.
+ */
+function getField(content, key) {
+  const patterns = [
+    new RegExp('^' + key + ':\\\\s*"([^"]*)"', 'm'),     // key: "value"
+    new RegExp('^' + key + ":\\\\s*'([^']*)'", 'm'),      // key: 'value'
+    new RegExp('^' + key + ':\\\\s*(.+?)\\\\s*$', 'm'),     // key: value
+  ];
+  for (const p of patterns) {
+    const m = content.match(p);
+    if (m && m[1] && m[1].trim()) return m[1].trim();
+  }
+  return null;
 }
 
 /**
@@ -126,10 +144,11 @@ try {
   // ── Read project state ─────────────────────────────────────────────
   const stateContent = readFileSync(stateFile, 'utf-8');
   const state = parseYamlSimple(stateContent);
-  const projectName = state['name'] || state['project'] || 'unknown';
-  const phase = state['phase'] || state['current-phase'] || 'unknown';
-  const sprint = state['sprint'] || state['current-sprint'] || 'none';
-  const projectType = state['type'] || state['project-type'] || 'unknown';
+  // Use robust getField for critical fields (survives format drift)
+  const projectName = getField(stateContent, 'project') || getField(stateContent, 'name') || state['name'] || state['project'] || 'unknown';
+  const phase = getField(stateContent, 'phase') || getField(stateContent, 'current-phase') || state['phase'] || state['current-phase'] || 'unknown';
+  const sprint = getField(stateContent, 'sprint') || getField(stateContent, 'current-sprint') || state['sprint'] || state['current-sprint'] || 'none';
+  const projectType = getField(stateContent, 'type') || getField(stateContent, 'project-type') || state['type'] || state['project-type'] || 'unknown';
 
   // ── Find latest checkpoint ─────────────────────────────────────────
   const checkpoint = findLatestCheckpoint();
@@ -203,18 +222,16 @@ try {
 
   // ── Log Claude's native worktrees ────────────────────────────────
   try {
-    const { execSync: execWorktree } = await import('child_process');
-    const branches = execWorktree('git branch', { cwd: projectRoot, encoding: 'utf-8' }).trim().split('\\n');
+    const branches = execSync('git branch', { cwd: projectRoot, encoding: 'utf-8' }).trim().split('\\n');
     const worktreeBranches = branches
       .map(b => b.trim().replace(/^\\*?\\s*/, ''))
       .filter(b => b.startsWith('worktree-agent-'));
 
     if (worktreeBranches.length > 0) {
-      const { writeFileSync: writeLog, mkdirSync: mkdirLog, readFileSync: readLog, existsSync: existsLog } = await import('fs');
       const logPath = join(projectRoot, '.fishi', 'state', 'worktree-log.yaml');
       let existingLog = [];
-      if (existsLog(logPath)) {
-        const logContent = readLog(logPath, 'utf-8');
+      if (existsSync(logPath)) {
+        const logContent = readFileSync(logPath, 'utf-8');
         const entries = logContent.split('\\n  - branch:').slice(1);
         existingLog = entries.map(e => {
           const m = e.match(/\\s*["']?([^"'\\n]+)/);
@@ -224,19 +241,19 @@ try {
 
       const newBranches = worktreeBranches.filter(b => !existingLog.includes(b));
       if (newBranches.length > 0) {
-        let yaml = existsLog(logPath) ? readLog(logPath, 'utf-8') : 'worktrees:\\n';
+        let yaml = existsSync(logPath) ? readFileSync(logPath, 'utf-8') : 'worktrees:\\n';
         for (const branch of newBranches) {
           let commitMsg = '';
           try {
-            commitMsg = execWorktree(\`git log \${branch} -1 --format=%s\`, { cwd: projectRoot, encoding: 'utf-8' }).trim();
+            commitMsg = execSync(\`git log \${branch} -1 --format=%s\`, { cwd: projectRoot, encoding: 'utf-8' }).trim();
           } catch {}
           let merged = false;
           try {
-            const mergedBranches = execWorktree('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
+            const mergedBranches = execSync('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
             merged = mergedBranches.includes(branch);
           } catch {
             try {
-              const mergedBranches = execWorktree('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
+              const mergedBranches = execSync('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
               merged = mergedBranches.includes(branch);
             } catch {}
           }
@@ -245,19 +262,19 @@ try {
           yaml += \`    status: "\${merged ? 'merged' : 'active'}"\\n\`;
           yaml += \`    commit: "\${commitMsg.replace(/"/g, "'")}"\\n\`;
         }
-        mkdirLog(join(projectRoot, '.fishi', 'state'), { recursive: true });
-        writeLog(logPath, yaml, 'utf-8');
+        mkdirSync(join(projectRoot, '.fishi', 'state'), { recursive: true });
+        writeFileSync(logPath, yaml, 'utf-8');
         console.log(\`[FISHI] Worktree branches logged: \${newBranches.length} new, \${existingLog.length} existing\`);
       }
 
       // Warn about orphaned worktrees (merged but not cleaned)
       const orphaned = worktreeBranches.filter(b => {
         try {
-          const merged = execWorktree('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
+          const merged = execSync('git branch --merged master', { cwd: projectRoot, encoding: 'utf-8' });
           return merged.includes(b);
         } catch {
           try {
-            const merged = execWorktree('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
+            const merged = execSync('git branch --merged main', { cwd: projectRoot, encoding: 'utf-8' });
             return merged.includes(b);
           } catch { return false; }
         }

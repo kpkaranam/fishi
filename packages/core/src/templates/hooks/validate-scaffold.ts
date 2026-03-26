@@ -222,7 +222,7 @@ const scriptFiles = [
 const configFiles = [
   '.fishi/fishi.yaml',
   '.claude/settings.json',
-  '.claude/CLAUDE.md',
+  // CLAUDE.md can be at root or .claude/ — checked separately below
   '.mcp.json',
 ];
 
@@ -275,10 +275,20 @@ for (const f of allFiles) {
   }
 }
 
-if (presentCount === allFiles.length) {
-  ok(\`\${presentCount}/\${allFiles.length} files present\`);
+// CLAUDE.md can be at root or .claude/ — check either location
+const claudeMdAtRoot = existsSync(join(projectRoot, 'CLAUDE.md'));
+const claudeMdAtDotClaude = existsSync(join(projectRoot, '.claude', 'CLAUDE.md'));
+if (claudeMdAtRoot || claudeMdAtDotClaude) {
+  presentCount++;
 } else {
-  ok(\`\${presentCount}/\${allFiles.length} files present (\${allFiles.length - presentCount} missing)\`);
+  fail('Missing file: CLAUDE.md (not found at root or .claude/)');
+}
+const totalExpected = allFiles.length + 1; // +1 for CLAUDE.md
+
+if (presentCount === totalExpected) {
+  ok(\`\${presentCount}/\${totalExpected} files present\`);
+} else {
+  ok(\`\${presentCount}/\${totalExpected} files present (\${totalExpected - presentCount} missing)\`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -496,7 +506,7 @@ let pipelineValid = true;
 const phases = ['discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment'];
 
 // Check CLAUDE.md or .claude/rules/pipeline.md references all 6 phases
-const claudeMd = readText('.claude/CLAUDE.md');
+const claudeMd = readText('CLAUDE.md') || readText('.claude/CLAUDE.md');
 const pipelineRules = readText('.claude/rules/pipeline.md');
 const pipelineSource = claudeMd || '';
 const pipelineRulesSource = pipelineRules || '';

@@ -367,12 +367,18 @@ export async function generateScaffold(
       filesCreated++;
     }
     // skip: don't touch root CLAUDE.md, don't create .claude/CLAUDE.md
-  } else if (resolutions?.categories['claude-md'] === 'merge') {
-    const existingMd = await fsReadFile(join(targetDir, '.claude', 'CLAUDE.md'), 'utf-8');
-    const merged = mergeClaudeMd(existingMd, claudeMdContent);
-    await write('.claude/CLAUDE.md', merged, 'claude-md');
+  } else if (existsSync(join(targetDir, '.claude', 'CLAUDE.md'))) {
+    // .claude/CLAUDE.md exists (brownfield) — merge or replace
+    if (resolutions?.categories['claude-md'] === 'merge') {
+      const existingMd = await fsReadFile(join(targetDir, '.claude', 'CLAUDE.md'), 'utf-8');
+      const merged = mergeClaudeMd(existingMd, claudeMdContent);
+      await write('.claude/CLAUDE.md', merged, 'claude-md');
+    } else {
+      await write('.claude/CLAUDE.md', claudeMdContent, 'claude-md');
+    }
   } else {
-    await write('.claude/CLAUDE.md', claudeMdContent, 'claude-md');
+    // Greenfield: no root CLAUDE.md and no .claude/CLAUDE.md — write to root
+    await write('CLAUDE.md', claudeMdContent, 'claude-md');
   }
 
   // Rules directory — split context by concern
@@ -380,6 +386,20 @@ export async function generateScaffold(
   await write('.claude/rules/delegation.md', getDelegationRules());
   await write('.claude/rules/safety.md', getSafetyRules());
   await write('.claude/rules/conventions.md', getConventionsRules(options.projectType, options.brownfieldAnalysis));
+
+  // Initialize design system config
+  await write('.fishi/design-system.json', JSON.stringify({
+    version: '1.0',
+    tokens: {
+      colors: {},
+      typography: { fontFamilies: [], scale: {} },
+      spacing: {},
+      borderRadius: {},
+      shadows: {},
+      darkMode: false,
+    },
+    components: { library: null, framework: null, count: 0, entries: [] },
+  }, null, 2) + '\n');
 
   // .mcp.json
   const mcpContent = getMcpJsonTemplate();
@@ -405,6 +425,11 @@ export async function generateScaffold(
     summary: { totalAgentCompletions: 0, totalFilesChanged: 0, totalTokens: 0, tokensByModel: {}, tokensByAgent: {}, toolsUsed: {}, dynamicAgentsCreated: 0 },
     dynamicAgents: [],
     lastUpdated: new Date().toISOString()
+  }, null, 2) + '\n');
+  await write('.fishi/state/dashboard.json', JSON.stringify({
+    port: 4269,
+    autoStart: false,
+    lastStarted: null,
   }, null, 2) + '\n');
   await write('.fishi/mcp-registry.yaml', getMcpRegistryTemplate());
   await write('.fishi/model-routing.md', getModelRoutingReference());

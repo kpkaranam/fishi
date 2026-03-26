@@ -7,11 +7,19 @@ export function getStatuslineScript(): string {
 const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
 const { join, dirname } = require('path');
 
-// Read JSON from stdin (Claude Code sends session data)
+// Read JSON from stdin synchronously (Claude Code sends all data at once)
 let input = '';
-process.stdin.on('data', chunk => input += chunk);
-process.stdin.on('end', () => {
+try {
+  input = require('fs').readFileSync('/dev/stdin', 'utf-8');
+} catch {
   try {
+    input = require('fs').readFileSync(0, 'utf-8'); // fd 0 = stdin
+  } catch {
+    process.exit(0);
+  }
+}
+
+try {
     const data = JSON.parse(input);
 
     const model = data.model?.display_name || '?';
@@ -98,7 +106,6 @@ process.stdin.on('end', () => {
   } catch (err) {
     console.log('[FISHI] status unavailable');
   }
-});
 `;
 }
 

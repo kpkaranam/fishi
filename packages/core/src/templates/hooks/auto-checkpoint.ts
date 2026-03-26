@@ -45,6 +45,23 @@ function parseYamlSimple(content) {
 }
 
 /**
+ * Robust field extractor — tries multiple patterns to handle format drift.
+ * Works even when project.yaml gets modified with different quoting styles.
+ */
+function getField(content, key) {
+  const patterns = [
+    new RegExp('^' + key + ':\\\\s*"([^"]*)"', 'm'),     // key: "value"
+    new RegExp('^' + key + ":\\\\s*'([^']*)'", 'm'),      // key: 'value'
+    new RegExp('^' + key + ':\\\\s*(.+?)\\\\s*$', 'm'),     // key: value
+  ];
+  for (const p of patterns) {
+    const m = content.match(p);
+    if (m && m[1] && m[1].trim()) return m[1].trim();
+  }
+  return null;
+}
+
+/**
  * Count tasks per column in a markdown taskboard.
  */
 function countTasksByColumn(content) {
@@ -136,9 +153,15 @@ try {
 
   // ── Read current project state ─────────────────────────────────────
   let state = {};
+  let stateContent = '';
   if (existsSync(stateFile)) {
-    state = parseYamlSimple(readFileSync(stateFile, 'utf-8'));
+    stateContent = readFileSync(stateFile, 'utf-8');
+    state = parseYamlSimple(stateContent);
   }
+  // Use robust getField for critical fields (survives format drift)
+  const projectName = getField(stateContent, 'project') || getField(stateContent, 'name') || state['name'] || state['project'] || 'unknown';
+  const phase = getField(stateContent, 'phase') || getField(stateContent, 'current-phase') || state['phase'] || state['current-phase'] || 'unknown';
+  const sprint = getField(stateContent, 'sprint') || getField(stateContent, 'current-sprint') || state['sprint'] || state['current-sprint'] || '0';
 
   // ── Determine next checkpoint number ───────────────────────────────
   let maxNum = 0;
@@ -174,9 +197,9 @@ try {
   const checkpointLines = [
     \`checkpoint_id: \${paddedNum}\`,
     \`timestamp: \${now}\`,
-    \`phase: \${state['phase'] || state['current-phase'] || 'unknown'}\`,
-    \`sprint: \${state['sprint'] || state['current-sprint'] || 'none'}\`,
-    \`project: \${state['name'] || state['project'] || 'unknown'}\`,
+    \`phase: \${phase}\`,
+    \`sprint: \${sprint}\`,
+    \`project: \${projectName}\`,
     '',
     'taskboard_snapshot:',
     \`  backlog: \${taskCounts.backlog}\`,
@@ -216,7 +239,7 @@ try {
   writeFileSync(checkpointPath, checkpointLines.join('\\n'), 'utf-8');
 
   // ── Update project.yaml with latest checkpoint reference ───────────
-  let stateContent = '';
+  // Re-read stateContent in case it was modified
   if (existsSync(stateFile)) {
     stateContent = readFileSync(stateFile, 'utf-8');
   }
@@ -249,11 +272,11 @@ try {
   // Emit monitoring event
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
-    emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
+    emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase, taskCounts } });
   } catch {
     try {
       const { emitMonitorEvent } = await import(new URL('file:///' + projectRoot.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href);
-      emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase: state['phase'] || state['current-phase'] || 'unknown', taskCounts } });
+      emitMonitorEvent(projectRoot, { type: 'checkpoint.created', agent: 'system', data: { checkpointId: paddedNum, phase, taskCounts } });
     } catch {}
   }
 } catch (err) {

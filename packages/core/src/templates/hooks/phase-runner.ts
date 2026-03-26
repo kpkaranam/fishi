@@ -234,15 +234,20 @@ function cmdValidate() {
     issues.push('Missing worktree-manager.mjs');
   }
 
-  // Check CLAUDE.md exists and mentions the pipeline
+  // Check CLAUDE.md exists and mentions the pipeline (root or .claude/)
   checks++;
-  if (existsSync('.claude/CLAUDE.md')) {
-    const claudeMd = readFileSync('.claude/CLAUDE.md', 'utf-8');
-    if (!claudeMd.includes('PRD') && !claudeMd.includes('prd')) {
+  const claudeMdExists = existsSync('CLAUDE.md') || existsSync('.claude/CLAUDE.md');
+  if (claudeMdExists) {
+    let claudeMd = '';
+    try { claudeMd = readFileSync('CLAUDE.md', 'utf-8'); } catch {}
+    if (!claudeMd) {
+      try { claudeMd = readFileSync('.claude/CLAUDE.md', 'utf-8'); } catch {}
+    }
+    if (claudeMd && !claudeMd.includes('PRD') && !claudeMd.includes('prd')) {
       issues.push('CLAUDE.md does not reference PRD phase');
     }
   } else {
-    issues.push('Missing .claude/CLAUDE.md');
+    issues.push('Missing CLAUDE.md (not found at root or .claude/)');
   }
 
   // Check settings.json has hooks and permissions

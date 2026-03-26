@@ -236,8 +236,10 @@ describe('generateScaffold', () => {
     it('creates CLAUDE.md', async () => {
       const dir = createTempDir();
       await generateScaffold(dir, defaultOptions);
-      const file = join(dir, '.claude', 'CLAUDE.md');
-      expect(existsSync(file)).toBe(true);
+      // Greenfield: CLAUDE.md is written to root (not .claude/)
+      const rootFile = join(dir, 'CLAUDE.md');
+      const dotClaudeFile = join(dir, '.claude', 'CLAUDE.md');
+      expect(existsSync(rootFile) || existsSync(dotClaudeFile)).toBe(true);
     });
 
     it('creates .mcp.json with valid JSON', async () => {
@@ -500,7 +502,8 @@ describe('generateScaffold — brownfield with resolutions', () => {
     expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
     expect(result.filesCreated).toBeGreaterThan(0);
-    expect(existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(true);
+    // Greenfield: CLAUDE.md written to root
+    expect(existsSync(join(dir, 'CLAUDE.md')) || existsSync(join(dir, '.claude', 'CLAUDE.md'))).toBe(true);
   });
 
   it('merges into root CLAUDE.md when rootClaudeMdExists is true', async () => {

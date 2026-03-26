@@ -181,6 +181,19 @@ try {
     console.log(\`[FISHI] Files changed: \${parsed.filesChanged.join(', ')}\`);
   }
 
+  // ── Auto-capture agent memory on completion ──────────────────────
+  if (agentName && summary) {
+    try {
+      const { execSync: execMem } = await import('child_process');
+      const taskKey = taskId || 'task-' + Date.now();
+      const safeValue = (summary || 'Task completed').replace(/"/g, "'").substring(0, 500);
+      execMem(
+        'node .fishi/scripts/memory-manager.mjs write --agent "' + agentName + '" --key "' + taskKey + '" --value "' + safeValue + '"',
+        { cwd: projectRoot, stdio: 'pipe', timeout: 5000 }
+      );
+    } catch {}
+  }
+
   // Emit monitoring event
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);

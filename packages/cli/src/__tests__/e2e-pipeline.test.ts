@@ -113,7 +113,11 @@ describe('E2E Pipeline Tests', () => {
       const mcp = JSON.parse(readFileSync(join(projectDir, '.mcp.json'), 'utf-8'));
       expect(mcp.mcpServers).toBeDefined();
 
-      const claudeMd = readFileSync(join(projectDir, '.claude', 'CLAUDE.md'), 'utf-8');
+      // CLAUDE.md may be at root (greenfield) or .claude/
+      const claudeMdPath = existsSync(join(projectDir, 'CLAUDE.md'))
+        ? join(projectDir, 'CLAUDE.md')
+        : join(projectDir, '.claude', 'CLAUDE.md');
+      const claudeMd = readFileSync(claudeMdPath, 'utf-8');
       expect(claudeMd).toContain('Pipeline State');
     });
   });
