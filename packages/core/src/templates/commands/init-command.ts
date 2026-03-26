@@ -106,12 +106,57 @@ STOP HERE. Present architecture to user. Wait for approval.
 ## Step 6: Sprint Planning Phase
 
 Use TodoWrite:
-- [ ] Break architecture into epics and tasks
-- [ ] Update taskboard with all tasks
-- [ ] Assign agents to tasks
+- [ ] Break architecture into epics
+- [ ] Break epics into stories
+- [ ] Break stories into tasks
+- [ ] Create sprint files and epic files
+- [ ] Update board with tasks assigned to agents
 - [ ] Create sprint plan
 
-Update the taskboard (\`.fishi/taskboard/board.md\`) with tasks under the Backlog column.
+### Create structured task breakdown:
+
+1. **Create epics** — save each to \`.fishi/taskboard/epics/{epic-slug}.md\`:
+\`\`\`markdown
+# Epic: {Epic Name}
+## Description
+{what this epic delivers}
+## Stories
+- [ ] STORY-001: {story title} → {assigned-agent}
+- [ ] STORY-002: {story title} → {assigned-agent}
+\`\`\`
+
+2. **Create sprint files** — save each to \`.fishi/taskboard/sprints/sprint-{N}.md\`:
+\`\`\`markdown
+# Sprint {N}: {Sprint Goal}
+## Tasks
+- [ ] TASK-001: {task} [Epic: {epic}] [Agent: {agent-name}] [Points: {1-5}]
+- [ ] TASK-002: {task} [Epic: {epic}] [Agent: {agent-name}] [Points: {1-5}]
+## Capacity
+Total points: {sum}
+\`\`\`
+
+3. **Update board.md** — organize by status columns:
+\`\`\`markdown
+## Backlog
+- [ ] TASK-001: {task} [Agent: backend-agent]
+- [ ] TASK-002: {task} [Agent: frontend-agent]
+
+## Ready
+
+## In Progress
+
+## Review
+
+## Done
+\`\`\`
+
+4. **Assign agents** — each task MUST have an agent assignment:
+   - Backend/API tasks → backend-agent
+   - Frontend/UI tasks → frontend-agent
+   - Full-stack features → fullstack-agent
+   - Database/schema → backend-agent
+   - Infrastructure → devops-agent
+   - Tests → testing-agent
 
 \`\`\`bash
 node .fishi/scripts/gate-manager.mjs create --phase sprint_planning --description "Sprint plan approval"
@@ -119,7 +164,7 @@ node .fishi/scripts/phase-runner.mjs set --phase sprint_planning
 \`\`\`
 
 <HARD-GATE>
-STOP HERE. Present sprint plan to user. Wait for approval.
+STOP HERE. Present sprint plan with epics, stories, tasks, and agent assignments to user. Wait for approval.
 </HARD-GATE>
 
 ## Step 7: Development Phase
@@ -128,46 +173,74 @@ STOP HERE. Present sprint plan to user. Wait for approval.
 node .fishi/scripts/phase-runner.mjs set --phase development
 \`\`\`
 
-For EACH task in the sprint:
+### For EACH sprint:
 
-1. **Create worktree**:
-\`\`\`bash
-node .fishi/scripts/worktree-manager.mjs create --agent {agent-name} --task {task-slug} --coordinator dev-lead
+#### For EACH task in the sprint:
+
+1. **Dispatch worker in isolated worktree**:
 \`\`\`
-
-2. **Lock files**:
-\`\`\`bash
-node .fishi/scripts/file-lock-hook.mjs lock --files "{files}" --agent {agent-name} --task {task-slug} --coordinator dev-lead
-\`\`\`
-
-3. **Update board**: Move task from Backlog to In Progress in \`.fishi/taskboard/board.md\`
-
-4. **Dispatch worker**:
-\`\`\`
-Use the Agent tool:
+Use the Agent tool with:
   subagent_type: "{agent-name}"
-  prompt: "You are {agent-name}. Your task: {task description}.
-           Work ONLY in the worktree at: .trees/agent-{agent-name}-{task-slug}/
-           Requirements: {from PRD/architecture}
-           When done:
-           - Commit your changes with: git add -A && git commit -m 'feat: {description}'
-           - Report: FILES_CHANGED, STATUS (success/failed), SUMMARY"
+  model: "sonnet"
+  isolation: "worktree"
+  prompt: "You are {agent-name}.
+
+TASK: {task-id}: {task description}
+
+REQUIREMENTS (from architecture):
+{specific requirements from ARCHITECTURE.md}
+
+INSTRUCTIONS:
+- Implement this task completely
+- Write tests for your code (TDD: test first, then implement)
+- Commit with conventional format: git commit -m 'feat({scope}): {description}'
+- Report back with:
+  STATUS: success or failed
+  FILES_CHANGED: list of files you created/modified
+  SUMMARY: what you implemented and key decisions made
+  TESTS: how many tests written and their status"
 \`\`\`
 
-5. **Review**: Dispatch quality-lead to review
+2. **Update board.md**: Move task from Backlog → In Progress BEFORE dispatch, then → Done AFTER completion
+
+3. **Update sprint file**: Mark task as [x] in \`.fishi/taskboard/sprints/sprint-{N}.md\`
+
+4. **Update epic file**: Mark story as [x] in \`.fishi/taskboard/epics/{epic}.md\` when all its tasks are done
+
+5. **Dispatch quality review** (for critical tasks):
 \`\`\`
-Use the Agent tool:
+Use the Agent tool with:
   subagent_type: "quality-lead"
-  prompt: "Review the code in .trees/agent-{agent-name}-{task-slug}/.
-           Check: correctness, tests, security, code quality.
-           Report: APPROVED or ISSUES with details"
+  model: "sonnet"
+  prompt: "Review the latest changes for task {task-id}.
+           Check: code correctness, test coverage, security issues, code quality.
+           Report: APPROVED or ISSUES with specific details"
 \`\`\`
 
-6. **Update board**: Move task to Done
-7. **Release locks**: \`node .fishi/scripts/file-lock-hook.mjs release --agent {agent-name}\`
-8. **Record learnings**: \`node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent-name} --domain {domain} --practice "{learning}"\`
+6. **Record learnings**:
+\`\`\`bash
+node .fishi/scripts/learnings-manager.mjs add-practice --agent {agent-name} --domain {domain} --practice "{what worked well}"
+\`\`\`
 
-Repeat for all tasks in the sprint.
+#### After EACH sprint:
+
+<HARD-GATE>
+SPRINT RETROSPECTIVE — Do NOT start next sprint without this:
+1. Update all task statuses in board.md (mark completed as [x])
+2. Update sprint file (mark all completed tasks)
+3. Record learnings:
+   \`\`\`bash
+   node .fishi/scripts/learnings-manager.mjs add-practice --agent system --domain sprint-{N} --practice "{what went well}"
+   \`\`\`
+4. Update project context:
+   \`\`\`bash
+   node .fishi/scripts/memory-manager.mjs write --agent master-orchestrator --key sprint-{N}-summary --value "{sprint summary, features delivered, decisions made}"
+   \`\`\`
+5. Present sprint summary to user
+Ask: "Sprint {N} complete. Approve to start Sprint {N+1}?"
+</HARD-GATE>
+
+Repeat for all sprints.
 
 ## Step 8: Deployment Phase
 
