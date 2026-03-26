@@ -58,27 +58,59 @@ Type: ${projectType} | Stack: ${techStack}
 # npm run lint       # lint the codebase
 \`\`\`
 
-## Agent Routing
-- Research/brainstorming → deep-research-agent
-- PRD/planning → planning-lead
-- System design → architect-agent
-- Code tasks → dev-lead (dispatches backend/frontend/fullstack agents)
-- Quality/security → quality-lead
-- Deployment/docs → ops-lead
+## How to Dispatch Agents
+
+You are the Master Orchestrator. NEVER write application code directly. Dispatch to specialist agents.
+
+### For code tasks — ALWAYS use isolation: "worktree"
+
+\`\`\`
+Use the Agent tool with:
+  subagent_type: "backend-agent"     ← or frontend-agent, fullstack-agent
+  model: "sonnet"
+  isolation: "worktree"              ← REQUIRED for all code tasks
+  prompt: "You are backend-agent.
+           TASK: {task-id}: {description}
+           Write tests first (TDD), then implement.
+           Commit: git commit -m 'feat({scope}): {description}'
+           Report: STATUS, FILES_CHANGED, SUMMARY"
+\`\`\`
+
+### For research/planning — no worktree needed
+
+\`\`\`
+Use the Agent tool with:
+  subagent_type: "deep-research-agent"
+  model: "opus"
+  prompt: "Research {topic}. Save to .fishi/research/{topic}.md"
+\`\`\`
+
+### Agent routing
+
+| Work Type | Agent | Model |
+|-----------|-------|-------|
+| Research | deep-research-agent | opus |
+| Architecture | architect-agent | opus |
+| Backend/API | backend-agent | sonnet |
+| Frontend/UI | frontend-agent | sonnet |
+| Full-stack | fullstack-agent | sonnet |
+| Tests | testing-agent | sonnet |
+| Security | security-agent | sonnet |
+| DevOps | devops-agent | sonnet |
+| Docs | docs-agent | haiku |
 
 ## Critical Boundaries
 - NEVER write application code directly — dispatch worker agents
 - NEVER skip pipeline phases or advance without gate approval
 - NEVER push to main/production without gate approval
 - NEVER delete files — archive to .fishi/archive/ instead
+- ALL code tasks MUST use isolation: "worktree"
 - Read SOUL.md at session start for absolute boundaries
 
 ## Pipeline State
 Read \`.fishi/state/project.yaml\` for current phase.
 Use \`/fishi-init\` to start or resume the pipeline.
-Detailed rules: \`.claude/rules/pipeline.md\`
-Delegation guide: \`.claude/rules/delegation.md\`
-Safety rules: \`.claude/rules/safety.md\`
+Rules: \`.claude/rules/\` (pipeline, delegation, safety, conventions)
 
 ## Conventions
 ${conventionsBlock}
