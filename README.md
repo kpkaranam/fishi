@@ -18,7 +18,7 @@
   <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
   <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/agents-22+-purple?style=flat-square" alt="22+ agents">
-  <img src="https://img.shields.io/badge/tests-613-brightgreen?style=flat-square" alt="613 tests">
+  <img src="https://img.shields.io/badge/tests-629-brightgreen?style=flat-square" alt="629 tests">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
 </p>
 
@@ -675,6 +675,52 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.18.0</b> — Context System Overhaul + Native Hooks + Statusline</summary>
+
+Major architecture change based on [ETH Zurich research](https://arxiv.org/html/2602.11988v1) and Claude Code best practices.
+
+**Context System (Research-Backed):**
+- CLAUDE.md reduced from 200+ lines to **74 lines** — only non-discoverable instructions (build commands, agent dispatch patterns, boundaries)
+- New `.claude/rules/` directory — pipeline.md, delegation.md, safety.md, conventions.md (auto-loaded by Claude Code)
+- Three-tier context: CLAUDE.md (hot) → rules/ (warm) → .fishi/plans/ (cold, on-demand)
+
+**Native Claude Code Hooks (6 new):**
+- `WorktreeCreate` / `WorktreeRemove` — logs worktree lifecycle to `.fishi/state/worktree-log.yaml`
+- `TaskCompleted` — blocks task completion if tests fail
+- `SessionEnd` — final checkpoint + project context update
+- `PostToolUseFailure` — auto-records failures to learnings
+- Settings.json now has **12 hook events** (was 5)
+
+**Statusline:**
+- FISHI statusline script shows: model, phase, cost, context usage, worktree info
+- Writes real-time metrics to monitor.json (tokens, cost, lines changed)
+
+**Sprint Planning Improvements:**
+- Creates epic files in `.fishi/taskboard/epics/`
+- Creates sprint files in `.fishi/taskboard/sprints/`
+- Each task has agent assignment + story points
+- Sprint retrospective HARD-GATE between sprints
+
+**Agent Dispatch:**
+- Explicit `isolation: "worktree"` and `model` parameters in dispatch patterns
+- Agent routing table with model selection (Opus/Sonnet/Haiku)
+- Auto memory capture via agent-complete hook
+
+**Fixes from E2E Audit:**
+- Checkpoint metadata parser — handles quoted YAML values correctly
+- CLAUDE.md now written to project root (highest priority)
+- Design system config auto-created during scaffold
+- Dashboard state auto-created during scaffold
+
+**Tested on:** ZenAgent (99 tasks, 7 sprints, 655 files) + code-dna (49 tasks, 10 epics, 3 sprints)
+
+**Known limitation:** Worktree isolation for subagents is Claude Code's internal decision — strongly suggested via CLAUDE.md but not guaranteed. See [discussion](https://github.com/kpkaranam/fishi/issues/23).
+
+- 629 tests
+
+</details>
+
+<details>
 <summary><b>v0.17.0</b> — Master Fix Batch (E2E Audit)</summary>
 
 14 fixes from comprehensive E2E audit on a real project (Todo + Note Management App — 5 sprints, 30+ commits, 120 source files).
