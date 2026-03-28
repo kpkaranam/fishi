@@ -1,8 +1,8 @@
-import { createRequire } from 'module';
 import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import {
   getSoulMdTemplate,
   getAgentsMdTemplate,
@@ -22,8 +22,11 @@ import {
   getBoardCommand,
 } from '@qlucent/fishi-core';
 
-const require = createRequire(import.meta.url);
-const { version: CURRENT_VERSION } = require('../../package.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CURRENT_VERSION: string = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf-8')
+).version;
 
 /**
  * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }
