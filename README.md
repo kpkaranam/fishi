@@ -224,7 +224,7 @@ npx @qlucent/fishi init "My project" --replace-all  # Replace all (backup saved)
 | **L2** | Planning Agent | Sprint planning, task breakdown |
 | **L2** | Architect Agent | System design, tech stack decisions |
 | **L2** | Backend Agent | APIs, services, database logic |
-| **L2** | Frontend Agent | UI components, state management |
+| **L2** | Frontend Agent | UI components, design-aware implementation, anti-AI-slop |
 | **L2** | Fullstack Agent | End-to-end feature implementation |
 | **L2** | UI/UX Agent | Design systems, accessibility, responsive layouts |
 | **L2** | DevOps Agent | CI/CD, Docker, infrastructure |
@@ -675,6 +675,38 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.19.1</b> — Design-Intelligent Frontend Agent</summary>
+
+Frontend agent upgraded from basic developer instructions to a design-aware implementer that produces professional, human-quality UI — not generic AI templates.
+
+**Design Thinking Protocol:**
+- Mandatory context gathering (design system detection, stack identification, purpose analysis) before any UI code
+- Forced aesthetic direction choice from 10 distinct styles (editorial, brutalist, luxury, retro-futuristic, etc.)
+- Differentiation check: "Would someone think this is a template?" — if yes, go bolder
+
+**Anti-AI-Slop Rules:**
+- Explicit bans on Inter/Roboto/Arial as display fonts, purple gradients on white, centered hero + CTA patterns, uniform card grids, rounded-lg shadow-md cards
+- Font convergence prevention (Space Grotesk, Outfit, Sora banned as defaults)
+- 60-30-10 color rule enforcement, tinted neutrals required (no pure black on pure white)
+
+**Design Reference Knowledge:**
+- Typography: modular scales, vertical rhythm, font pairing rules, fluid type with `clamp()`, web font loading
+- Color: OKLCH color space, WCAG contrast ratios, dark mode guidelines (desaturate, don't invert)
+- Spatial: 4pt/8pt grid system, squint test, container queries, optical adjustments, layered shadows
+- Motion: timing rules (100/300/500ms), easing curves (out-expo/in-expo), transform+opacity only, staggered reveals
+- Interaction: 8 interactive states required, skeleton loaders over spinners, undo over confirm dialogs
+- Responsive: mobile-first, content-driven breakpoints, input method detection, safe areas
+- UX writing: specific button verbs, error message formula, empty state patterns
+
+**Pre-Delivery Quality Checklist:**
+- 25-point checklist across visual quality, interaction, accessibility, responsiveness, and light/dark mode
+- Must pass before any UI task can be marked complete
+
+Inspired by best practices from [Anthropic's frontend-design plugin](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design), [Impeccable](https://github.com/pbakaus/impeccable), and [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
+
+</details>
+
+<details>
 <summary><b>v0.19.0</b> — QA/Security Phase + Worktree Enforcement + Action Logging</summary>
 
 Three major fixes addressing gaps found in real-world pipeline runs.
