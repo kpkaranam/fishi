@@ -7,7 +7,7 @@
     Structured multi-agent development pipelines for Claude Code with gate-based human oversight.
   </p>
   <p align="center">
-    <code>22+ Agents</code> &bull; <code>Dynamic Agent Creation</code> &bull; <code>8-Phase SDLC Pipeline</code> &bull; <code>Built-in Security Scanner</code> &bull; <code>Brownfield Safe</code> &bull; <code>Phase-Enforced Pipeline</code> &bull; <code>55 Integration Patterns</code>
+    <code>22+ Agents</code> &bull; <code>Dynamic Agent Creation</code> &bull; <code>9-Phase SDLC Pipeline</code> &bull; <code>Built-in Security Scanner</code> &bull; <code>Brownfield Safe</code> &bull; <code>Phase-Enforced Pipeline</code> &bull; <code>55 Integration Patterns</code>
   </p>
 </p>
 
@@ -51,7 +51,7 @@ npx @qlucent/fishi init "Build me a SaaS invoicing platform with Stripe"
 <td width="33%">
 
 ### Structured Pipelines
-Every project follows an 8-phase SDLC pipeline with 5 approval gates. No cowboy coding — discovery, PRD, architecture, sprint planning, then development.
+Every project follows a 9-phase SDLC pipeline with 7 approval gates. No cowboy coding — discovery, PRD, architecture, sprint planning, development, QA & security, then deployment.
 
 </td>
 <td width="33%">
@@ -444,7 +444,7 @@ How FISHI compares to other approaches:
 | Capability | Raw Claude Code | Lovable / Bolt | FISHI |
 |-----------|----------------|---------------|-------|
 | **Agents** | 1 (you) | 1 AI | 22+ specialized agents |
-| **Pipeline** | None | None | 8-phase SDLC with 5 gates |
+| **Pipeline** | None | None | 9-phase SDLC with 7 gates |
 | **Human oversight** | Manual | None | Gate-based approval |
 | **Brownfield support** | Manual | No (greenfield only) | Auto-detect + safe merge |
 | **Testing** | Optional | None | TDD enforced by Quality Lead |
@@ -675,6 +675,36 @@ AGENTS.md                        # Per-role action gates and escalation paths
 ## Changelog
 
 <details open>
+<summary><b>v0.19.0</b> — QA/Security Phase + Worktree Enforcement + Action Logging</summary>
+
+Three major fixes addressing gaps found in real-world pipeline runs.
+
+**New QA & Security Phase (Pipeline is now 9 phases, 7 gates):**
+- Added dedicated `qa_security` phase between development and deployment
+- Quality-lead is primary coordinator — runs full test suite, security audit, OWASP Top 10 review
+- Development phase now has its own gate (was `null`) — blocks advancement without dev-lead sign-off
+- Remediation cycle: failed gates loop back to dev-lead for fixes, then re-verification
+- Both QA and deployment gates require explicit user approval even in economy mode
+- Pipeline: `init → discovery → prd → architecture → sprint_planning → development → qa_security → deployment → deployed`
+
+**Worktree Enforcement (3-Layer Defense):**
+- **Layer 1 — `worktree-guard.mjs` (NEW):** PreToolUse hook on Agent tool — BLOCKS code-writing agents (backend, frontend, fullstack, testing, devops) if `isolation: "worktree"` is missing during development/QA phases
+- **Layer 2 — `phase-guard.mjs` (UPGRADED):** Changed from warning (exit 0) to BLOCKING (exit 2) for application code writes outside `.trees/` during development/QA. Still allows root configs, docs, and `.fishi/` infrastructure
+- **Layer 3 — Agent self-check (NEW):** All 5 code-writing agents now verify on startup: `git branch --show-current` must match `agent/{coordinator}/{agent}/{task}`, `pwd` must contain `.trees/`. If on main/master/dev — agent stops and reports blocked
+- Coordinator delegation templates now show exact Agent tool call format with `isolation: "worktree"` as MANDATORY
+- Previously: worktree isolation was entirely advisory — agents ignored warnings and coded on master
+
+**Action Logging & Taskboard Verification:**
+- All 4 coordinators (dev-lead, quality-lead, ops-lead, planning-lead) now have mandatory "Task Completion Verification" protocol
+- Before marking ANY task `done`: verify acceptance criteria with evidence, verify taskboard accuracy, write structured action log to `.fishi/logs/actions/{coordinator}-actions.md`
+- Master orchestrator gate procedure now reads action logs and cross-references with taskboard — rejects gate if any `done` task lacks a log entry
+- Previously: tasks were marked done without documentation, downstream phases had no visibility into what was actually completed
+
+**Updated across 30+ files:** phase-runner, master-orchestrator, all 4 coordinators, 5 worker agents, settings.json, scaffold generator, validate-scaffold, dashboard, documentation skill, fishi-init command — both source templates (.ts) and published plugin files (.md).
+
+</details>
+
+<details>
 <summary><b>v0.18.0</b> — Context System Overhaul + Native Hooks + Statusline</summary>
 
 Major architecture change based on [ETH Zurich research](https://arxiv.org/html/2602.11988v1) and Claude Code best practices.

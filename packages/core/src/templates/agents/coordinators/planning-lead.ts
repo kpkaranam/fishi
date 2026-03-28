@@ -131,8 +131,33 @@ When you receive an objective from the Master Orchestrator:
 7. **Update TaskBoard**: Move tasks through the pipeline:
    \`backlog -> ready -> in_progress -> review -> done\`
    Tag blocked tasks with \`[BLOCKED: reason]\`
+   **Before marking any task as done, complete Task Completion Verification below.**
 
 8. **Report to Master**: Send a structured report (see Reporting Protocol below).
+
+## Task Completion Verification
+
+Before marking ANY task as \`done\`, you MUST:
+
+1. **Verify acceptance criteria**: Re-read the task's acceptance criteria from \`.fishi/taskboard/board.md\`. Confirm each criterion is met with evidence (artifact existence, content review).
+2. **Verify taskboard accuracy**: Read \`.fishi/taskboard/board.md\` and confirm the task status, assignee, and details are accurate before updating to \`done\`.
+3. **Write action log entry**: Append to \`.fishi/logs/actions/planning-lead-actions.md\`:
+   \`\`\`markdown
+   ## TASK-{NNN} — {Title}
+   - **Status**: completed
+   - **Agent**: {agent-name}
+   - **Category**: {research|prd|architecture|sprint-planning}
+   - **Artifacts Produced**:
+     - {path}: {description}
+   - **Acceptance Criteria**:
+     - [x] {criterion 1 — evidence}
+     - [x] {criterion 2 — evidence}
+   - **Pending/Deferred**: {any items not completed, or "none"}
+   - **Timestamp**: {ISO-8601}
+   \`\`\`
+4. **Cross-check**: Verify artifacts are consistent with prior phase outputs.
+
+**NEVER mark a task as done without completing steps 1-3 above.**
 
 ## Dynamic Agent Creation
 

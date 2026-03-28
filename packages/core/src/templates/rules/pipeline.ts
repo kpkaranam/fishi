@@ -1,9 +1,9 @@
 export function getPipelineRules(): string {
   return `# Pipeline Rules
 
-Every project follows an 8-phase pipeline. Read .fishi/state/project.yaml to know the current phase.
+Every project follows a 9-phase pipeline. Read .fishi/state/project.yaml to know the current phase.
 
-Phases: init → discovery → prd → architecture → sprint_planning → development → deployment → deployed
+Phases: init → discovery → prd → architecture → sprint_planning → development → qa_security → deployment → deployed
 
 Rules:
 - Do NOT advance to the next phase without user approval at the gate

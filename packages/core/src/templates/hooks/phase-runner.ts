@@ -31,8 +31,9 @@ const PHASES = [
   { name: 'prd',             description: 'PRD creation & requirements',                gate: 'prd' },
   { name: 'architecture',    description: 'System architecture & tech stack design',    gate: 'architecture' },
   { name: 'sprint_planning', description: 'Sprint planning — epics, stories, tasks',    gate: 'sprint_planning' },
-  { name: 'development',     description: 'Sprint execution — agents coding in worktrees', gate: null },
-  { name: 'deployment',      description: 'CI/CD, docs, security audit, deploy',        gate: 'deployment' },
+  { name: 'development',     description: 'Sprint execution — agents coding in worktrees', gate: 'development' },
+  { name: 'qa_security',     description: 'QA validation, security audit, quality gates', gate: 'qa_security' },
+  { name: 'deployment',      description: 'CI/CD, docs, deploy',                        gate: 'deployment' },
   { name: 'deployed',        description: 'Project deployed and complete',              gate: null },
 ];
 
@@ -207,6 +208,11 @@ function cmdValidate() {
       '.claude/agents/frontend-agent.md',
       '.claude/agents/testing-agent.md',
       '.fishi/scripts/worktree-manager.mjs',
+    ],
+    qa_security: [
+      '.claude/agents/coordinators/quality-lead.md',
+      '.claude/agents/testing-agent.md',
+      '.claude/agents/security-agent.md',
     ],
     deployment: [
       '.claude/agents/coordinators/ops-lead.md',

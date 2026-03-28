@@ -54,7 +54,14 @@ enforcement mechanisms for each project phase.
 - **Location**: In-code + `.fishi/memory/decisions.md` + `CHANGELOG.md`
 - **Gate check**: `node .fishi/scripts/doc-checker.mjs check --phase development`
 
-### Phase 6: Deployment
+### Phase 6: QA & Security
+- **Artifacts**:
+  - Quality report (test results, coverage summary)
+  - Security audit findings
+- **Location**: `.fishi/plans/quality/` + `.fishi/quality/`
+- **Gate check**: `node .fishi/scripts/doc-checker.mjs check --phase qa_security`
+
+### Phase 7: Deployment
 - **Artifacts**:
   - Runbook (how to deploy, rollback, troubleshoot)
   - Environment setup guide

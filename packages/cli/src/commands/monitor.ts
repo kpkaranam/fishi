@@ -4,7 +4,7 @@ import path from 'path';
 import { parse as parseYaml } from 'yaml';
 import { readMonitorState, getAgentSummary } from '@qlucent/fishi-core';
 
-const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment', 'deployed'];
+const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'qa_security', 'deployment', 'deployed'];
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;

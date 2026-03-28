@@ -1,6 +1,6 @@
 {
   "name": "@qlucent/fishi-core",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Shared templates, types, and generators for the FISHI framework",
   "license": "MIT",
   "type": "module",
@@ -31,6 +31,6 @@
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.2"
   }
 }

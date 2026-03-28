@@ -103,6 +103,7 @@ export {
   getTaskCompletedHook,
   getSessionEndHook,
   getFailureLoggerHook,
+  getWorktreeGuardHook,
 } from './templates/hooks/index';
 
 // Command templates

@@ -64,6 +64,15 @@ export function getSettingsJsonTemplate(): string {
             },
           ],
         },
+        {
+          matcher: "Agent",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/worktree-guard.mjs",
+            },
+          ],
+        },
       ],
       PostToolUse: [
         {

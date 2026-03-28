@@ -469,44 +469,112 @@ populated TaskBoard.
 
 ---
 
-### Phase 6: Deployment & Delivery
+### Phase 6: QA & Security
 
-**Goal:** Prepare the project for production — CI/CD, documentation, security
-audit, and final delivery.
+**Goal:** Run comprehensive quality assurance and security audits on the
+completed codebase before deployment.
+
+1. **Delegate to quality-lead coordinator:**
+   ```
+   DELEGATION TO: quality-lead
+   PHASE: 6 — QA & Security
+   OBJECTIVE: Run final QA and security validation on the completed codebase:
+     1. Full test suite — unit, integration, and E2E tests. Report coverage.
+     2. Security audit — dependency vulnerability scan, SAST analysis, secret
+        scanning, OWASP Top 10 review.
+     3. Quality gate enforcement — verify all gates (unit test coverage >= 80%,
+        no high/critical vulnerabilities, all integration tests pass, critical
+        E2E flows pass).
+     4. Produce final quality report and security findings.
+   CONSTRAINTS:
+     - All quality gates must pass before proceeding
+     - No critical or high security vulnerabilities allowed
+     - Coverage must meet project thresholds
+   INPUT ARTIFACTS:
+     - Full codebase on dev branch
+     - .fishi/plans/quality/ (existing quality reports from development)
+     - .fishi/plans/architecture/ (to understand what to test)
+   OUTPUT ARTIFACTS:
+     - .fishi/plans/quality/final-quality-report.yaml
+     - .fishi/plans/quality/security-audit.yaml
+     - .fishi/plans/quality/coverage-report.md
+     - .fishi/quality/security-findings.md
+   DEADLINE SIGNAL: All quality gates pass, security audit clean.
+   ESCALATION POLICY: Escalate gate failures or critical vulnerabilities for remediation.
+   ```
+
+2. **Remediation cycle.** If quality-lead reports failures:
+   - Delegate fix tasks back to dev-lead.
+   - Dev-lead fixes issues and reports back.
+   - Quality-lead re-runs affected checks.
+   - Repeat until all gates pass.
+
+3. **GATE: QA & Security Approval.**
+   This gate ALWAYS requires explicit user approval, even in economy mode.
+   ```
+   ═══════════════════════════════════════════
+   GATE 6: QA & Security Approval
+   ═══════════════════════════════════════════
+   Phase:     QA & Security
+
+   Quality Gates:
+     [x] Unit test coverage >= 80%
+     [x] All integration tests passing
+     [x] Critical E2E flows passing
+     [x] No critical/high vulnerabilities
+     [x] Dependency audit clean
+     [x] Secret scanning clean
+
+   Artifacts:
+     - .fishi/plans/quality/final-quality-report.yaml
+     - .fishi/plans/quality/security-audit.yaml
+     - .fishi/plans/quality/coverage-report.md
+
+   → Approve to proceed to deployment.
+   → Reject to address quality/security issues.
+   ═══════════════════════════════════════════
+   ```
+
+---
+
+### Phase 7: Deployment & Delivery
+
+**Goal:** Prepare the project for production — CI/CD, documentation, and final
+delivery.
 
 1. **Delegate to ops-lead coordinator:**
    ```
    DELEGATION TO: ops-lead
-   PHASE: 6 — Deployment
+   PHASE: 7 — Deployment
    OBJECTIVE: Prepare the project for production delivery:
      1. DevOps agent: Set up CI/CD pipeline, Docker configuration, infrastructure
         as code, environment configuration
      2. Docs agent: Generate API documentation, update README, create deployment
         guide, write CHANGELOG
-     3. Security agent: Final security audit across the full codebase
    CONSTRAINTS:
      - CI/CD must pass all tests before deployment is possible
      - Documentation must cover setup, configuration, and deployment
-     - Security audit must have zero critical/high findings
+     - QA & Security gate (Phase 6) must have been approved
    INPUT ARTIFACTS:
      - Full codebase on dev branch
      - .fishi/plans/architecture/ (all files)
      - .fishi/plans/prd/<prd-file>.md
+     - .fishi/plans/quality/final-quality-report.yaml (Phase 6 output)
+     - .fishi/plans/quality/security-audit.yaml (Phase 6 output)
    OUTPUT ARTIFACTS:
      - .fishi/plans/delivery/deployment-checklist.md
      - .fishi/plans/delivery/changelog.md
-     - .fishi/plans/delivery/security-audit.md
      - CI/CD configuration files
      - Documentation files (README, API docs)
-   DEADLINE SIGNAL: All delivery artifacts complete, CI passes, security audit clean.
-   ESCALATION POLICY: Escalate critical security findings or CI/CD blockers.
+   DEADLINE SIGNAL: All delivery artifacts complete, CI passes.
+   ESCALATION POLICY: Escalate CI/CD blockers.
    ```
 
 2. **Final PR Review.** Before presenting to the user, perform the master
    orchestrator's final PR review checklist:
    - **Scope check:** Does the PR implement what the PRD specified? Compare
      against acceptance criteria.
-   - **Quality check:** Has quality-lead signed off? Are test results acceptable?
+   - **Quality check:** Has quality-lead signed off in Phase 6?
    - **No orphaned work:** Is the TaskBoard fully resolved? No tasks stuck in
      "In Progress" or "Blocked."
    - **Documentation:** Are README, CHANGELOG, and inline docs present?
@@ -516,14 +584,13 @@ audit, and final delivery.
    This gate ALWAYS requires explicit user approval, even in economy mode.
    ```
    ═══════════════════════════════════════════
-   GATE 6: Production Delivery Approval
+   GATE 7: Production Delivery Approval
    ═══════════════════════════════════════════
    Phase:     Deployment & Delivery
 
    Delivery Checklist:
      [x] All PRD acceptance criteria met
-     [x] All tests passing
-     [x] Security audit clean
+     [x] QA & Security gate (Phase 6) approved
      [x] CI/CD pipeline configured
      [x] Documentation complete
      [x] CHANGELOG updated
@@ -532,7 +599,6 @@ audit, and final delivery.
    Artifacts:
      - .fishi/plans/delivery/deployment-checklist.md
      - .fishi/plans/delivery/changelog.md
-     - .fishi/plans/delivery/security-audit.md
 
    Summary:
      - <total features implemented>
@@ -604,8 +670,8 @@ audit, and final delivery.
 | `.fishi/plans/prd/` | PRD documents from Phase 2 |
 | `.fishi/plans/architecture/` | Architecture artifacts from Phase 3 |
 | `.fishi/taskboard/` | Task board, epics, sprints from Phase 4+ |
-| `.fishi/plans/quality/` | Quality reports from Phase 5 |
-| `.fishi/plans/delivery/` | Deployment artifacts from Phase 6 |
+| `.fishi/plans/quality/` | Quality reports from Phase 5-6 |
+| `.fishi/plans/delivery/` | Deployment artifacts from Phase 7 |
 
 ---
 

@@ -83,19 +83,27 @@ if (planningPhases.includes(phase)) {
   }
 }
 
-if (phase === 'development') {
-  // During development, warn if writing outside a worktree
+if (phase === 'development' || phase === 'qa_security') {
+  // During development/QA, BLOCK code writes outside a worktree
   if (!filePath.includes('.trees/') && !filePath.includes('.trees\\\\')) {
-    // Allow package.json, config files at root
-    const rootConfigs = ['package.json', 'tsconfig', '.eslintrc', '.prettierrc', 'next.config', 'vite.config', 'astro.config'];
+    // Allow root config files that legitimately need editing
+    const rootConfigs = ['package.json', 'package-lock.json', 'tsconfig', '.eslintrc', '.prettierrc', 'next.config', 'vite.config', 'astro.config', '.env', 'pnpm-lock', 'yarn.lock', 'bun.lockb'];
     const isRootConfig = rootConfigs.some(c => filePath.includes(c));
 
-    if (!isRootConfig) {
-      console.error(\`[FISHI PHASE GUARD] Warning: Writing code outside a worktree.\`);
+    // Allow documentation and plan files
+    const allowedExtensions = ['.md', '.yaml', '.yml', '.txt'];
+    const hasAllowedExt = allowedExtensions.some(ext => filePath.endsWith(ext));
+
+    // Allow test result/report files
+    const isTestOutput = filePath.includes('coverage/') || filePath.includes('test-results/') || filePath.includes('.fishi/quality/');
+
+    if (!isRootConfig && !hasAllowedExt && !isTestOutput) {
+      console.error(\`[FISHI PHASE GUARD] BLOCKED: Cannot write application code outside a worktree during "\${phase}" phase.\`);
       console.error(\`  File: \${filePath}\`);
-      console.error(\`  Recommended: Create a worktree first:\`);
+      console.error(\`  All code changes during development MUST happen in an agent worktree.\`);
+      console.error(\`  Create a worktree first:\`);
       console.error(\`  node .fishi/scripts/worktree-manager.mjs create --agent {agent} --task {task} --coordinator dev-lead\`);
-      // Warning only — don't block (exit 0)
+      process.exit(2); // Exit code 2 = BLOCK the action
     }
   }
 }

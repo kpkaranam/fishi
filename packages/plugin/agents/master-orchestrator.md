@@ -237,11 +237,48 @@ feasibility.
 **Exit gate (per sprint):** All sprint tasks done or explicitly deferred. Tests
 pass. Quality report acceptable.
 
-**Exit gate (phase):** All sprints complete. Full integration test passes.
+**Exit gate (phase):** All sprints complete. Dev-lead confirms all tasks done
+or explicitly deferred. Code merged to integration branch.
 
 ---
 
-### Phase 6 — Deployment & Delivery
+### Phase 6 — QA & Security
+
+**Objective:** Run comprehensive quality assurance and security audits on the
+completed codebase before deployment.
+
+**Coordinator:** `quality-lead` (primary)
+
+**Delegation instruction to quality-lead:**
+> "Run final QA and security validation on the completed codebase. Execute:
+> 1. Full test suite — unit, integration, and E2E tests. Report coverage.
+> 2. Security audit — dependency vulnerability scan, SAST analysis, secret
+>    scanning, OWASP Top 10 review.
+> 3. Quality gate enforcement — verify all gates (unit test coverage >= 80%,
+>    no high/critical vulnerabilities, all integration tests pass, critical
+>    E2E flows pass).
+> 4. Produce final quality report and security findings.
+> Signal when all gates pass or report failures for remediation."
+
+**Artifacts:**
+- `.fishi/plans/quality/final-quality-report.yaml`
+- `.fishi/plans/quality/security-audit.yaml`
+- `.fishi/plans/quality/coverage-report.md`
+- `.fishi/quality/security-findings.md`
+
+**Remediation cycle:** If quality-lead reports gate failures or critical
+vulnerabilities:
+1. Master delegates fix tasks back to `dev-lead`.
+2. Dev-lead fixes issues and reports back.
+3. Quality-lead re-runs affected checks.
+4. Cycle repeats until all gates pass.
+
+**Exit gate:** All quality gates pass. No critical/high vulnerabilities.
+Coverage meets thresholds. Quality-lead signs off.
+
+---
+
+### Phase 7 — Deployment & Delivery
 
 **Objective:** Prepare the project for delivery — final PR, documentation,
 deployment config.
@@ -366,10 +403,17 @@ project does not accumulate unvalidated assumptions.
 
 1. **Coordinator signals readiness.** The coordinator responsible for the current
    phase reports that all artifacts are complete.
-2. **Master validates artifacts.** You review the artifacts for:
+2. **Master validates artifacts and action logs.** You review:
    - Completeness — all required artifacts exist and are non-empty.
    - Consistency — artifacts don't contradict each other or prior phase outputs.
    - Quality — artifacts meet the standard expected for the cost mode.
+   - **Action logs** — read `.fishi/logs/actions/{coordinator}-actions.md` to verify
+     all tasks have documented completion evidence. If any task marked `done` on the
+     taskboard lacks an action log entry, reject the gate and request the coordinator
+     to document the missing entries.
+   - **Taskboard accuracy** — read `.fishi/taskboard/board.md` and cross-reference
+     with action logs. Every `done` task must have a matching action log entry.
+     No tasks should be stuck in `in_progress` or `review` unless explicitly deferred.
 3. **Master prepares gate summary.** Write a concise summary for the user that
    includes:
    - What was accomplished in this phase.
@@ -398,8 +442,8 @@ gates:
 
 In economy mode, the user may pre-approve gate auto-pass for low-risk phases.
 If `gates.enabled` is false in config, log the gate as `skipped` and proceed.
-Even in economy mode, the final delivery gate (Phase 6) always requires explicit
-user approval.
+Even in economy mode, the QA & Security gate (Phase 6) and final delivery gate
+(Phase 7) always require explicit user approval.
 
 ---
 
@@ -539,7 +583,7 @@ RECOMMENDATION: {your recommended option and why}
 
 ## 9. Final PR Review Protocol
 
-Before presenting the final PR to the user (Phase 6 gate), perform this
+Before presenting the final PR to the user (Phase 7 gate), perform this
 checklist:
 
 1. **Scope check.** Does the PR implement what the PRD specified? Compare the

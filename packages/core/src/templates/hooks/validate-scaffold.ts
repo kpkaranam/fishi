@@ -217,6 +217,8 @@ const scriptFiles = [
   '.fishi/scripts/taskboard-update.mjs',
   '.fishi/scripts/worktree-manager.mjs',
   '.fishi/scripts/gate-manager.mjs',
+  '.fishi/scripts/worktree-guard.mjs',
+  '.fishi/scripts/phase-guard.mjs',
 ];
 
 const configFiles = [
@@ -503,9 +505,9 @@ if (crossRefValid) {
 console.log(\`\${PREFIX} Checking pipeline consistency...\`);
 
 let pipelineValid = true;
-const phases = ['discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment'];
+const phases = ['discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'qa_security', 'deployment'];
 
-// Check CLAUDE.md or .claude/rules/pipeline.md references all 6 phases
+// Check CLAUDE.md or .claude/rules/pipeline.md references all 7 phases
 const claudeMd = readText('CLAUDE.md') || readText('.claude/CLAUDE.md');
 const pipelineRules = readText('.claude/rules/pipeline.md');
 const pipelineSource = claudeMd || '';
@@ -529,7 +531,7 @@ if (claudeMd || pipelineRules) {
 // Check /fishi-init command references phase transitions
 const initCmd = readText('.claude/commands/fishi-init.md');
 if (initCmd) {
-  const phaseTerms = ['discovery', 'prd', 'architecture', 'sprint', 'development', 'deployment'];
+  const phaseTerms = ['discovery', 'prd', 'architecture', 'sprint', 'development', 'qa_security', 'deployment'];
   let initMissingPhases = false;
   for (const term of phaseTerms) {
     if (!initCmd.toLowerCase().includes(term)) {

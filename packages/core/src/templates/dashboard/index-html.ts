@@ -228,7 +228,7 @@ export function getDashboardHtml(): string {
   </main>
 
   <script>
-    const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'deployment', 'deployed'];
+    const PHASES = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning', 'development', 'qa_security', 'deployment', 'deployed'];
 
     function fmt(n) {
       if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';

@@ -77,6 +77,7 @@ import { getWorktreeHooksScript } from '../templates/hooks/worktree-hooks.js';
 import { getTaskCompletedHook } from '../templates/hooks/task-completed-hook.js';
 import { getSessionEndHook } from '../templates/hooks/session-end-hook.js';
 import { getFailureLoggerHook } from '../templates/hooks/failure-logger.js';
+import { getWorktreeGuardHook } from '../templates/hooks/worktree-guard.js';
 import { getStatuslineScript } from '../templates/configs/statusline.js';
 
 // Command templates
@@ -290,6 +291,7 @@ export async function generateScaffold(
   await write('.fishi/scripts/monitor-emitter.mjs', getMonitorEmitterScript());
   await write('.fishi/scripts/file-lock-hook.mjs', getFileLockHookScript());
   await write('.fishi/scripts/phase-guard.mjs', getPhaseGuardHook());
+  await write('.fishi/scripts/worktree-guard.mjs', getWorktreeGuardHook());
   await write('.fishi/scripts/worktree-hooks.mjs', getWorktreeHooksScript());
   await write('.fishi/scripts/task-completed-hook.mjs', getTaskCompletedHook());
   await write('.fishi/scripts/session-end-hook.mjs', getSessionEndHook());

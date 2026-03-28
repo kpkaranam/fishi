@@ -20,3 +20,4 @@ export { getWorktreeHooksScript } from './worktree-hooks';
 export { getTaskCompletedHook } from './task-completed-hook';
 export { getSessionEndHook } from './session-end-hook';
 export { getFailureLoggerHook } from './failure-logger';
+export { getWorktreeGuardHook } from './worktree-guard';
