@@ -1,3 +1,4 @@
+import { createRequire } from 'module';
 import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
@@ -21,7 +22,8 @@ import {
   getBoardCommand,
 } from '@qlucent/fishi-core';
 
-const CURRENT_VERSION = '0.17.0';
+const require = createRequire(import.meta.url);
+const { version: CURRENT_VERSION } = require('../../package.json');
 
 /**
  * Convert old hook format { matcher, command } to new { matcher, hooks: [{ type, command }] }
