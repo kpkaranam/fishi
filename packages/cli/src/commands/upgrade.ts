@@ -20,6 +20,25 @@ import {
   getStatusCommand,
   getGateCommand,
   getBoardCommand,
+  getMasterOrchestratorTemplate,
+  planningLeadTemplate,
+  devLeadTemplate,
+  qualityLeadTemplate,
+  opsLeadTemplate,
+  researchAgentTemplate,
+  planningAgentTemplate,
+  architectAgentTemplate,
+  backendAgentTemplate,
+  frontendAgentTemplate,
+  uiuxAgentTemplate,
+  fullstackAgentTemplate,
+  devopsAgentTemplate,
+  testingAgentTemplate,
+  securityAgentTemplate,
+  docsAgentTemplate,
+  writingAgentTemplate,
+  marketingAgentTemplate,
+  getDeepResearchAgentTemplate,
 } from '@qlucent/fishi-core';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -301,7 +320,60 @@ export async function upgradeCommand(): Promise<void> {
   fs.writeFileSync(path.join(rulesDir, 'conventions.md'), getConventionsRules('greenfield'), 'utf-8');
   updated.push('.claude/rules/ (pipeline, delegation, safety, conventions)');
 
-  // 16. Initialize worktree-log.yaml if missing
+  // 16. Regenerate all agent definitions with latest templates
+  const agentsDir = path.join(targetDir, '.claude', 'agents');
+  if (fs.existsSync(agentsDir)) {
+    try {
+      // Read project info from fishi.yaml for template context
+      const fishiYamlPath = path.join(targetDir, '.fishi', 'fishi.yaml');
+      const fishiYamlContent = fs.existsSync(fishiYamlPath) ? fs.readFileSync(fishiYamlPath, 'utf-8') : '';
+      const nameMatch2 = fishiYamlContent.match(/name:\s*["']?(.+?)["']?\s*$/m);
+      const descMatch2 = fishiYamlContent.match(/description:\s*["']?(.+?)["']?\s*$/m);
+      const typeMatch2 = fishiYamlContent.match(/type:\s*(\w+)/m);
+
+      const ctx = {
+        projectName: nameMatch2?.[1] || path.basename(targetDir),
+        projectDescription: descMatch2?.[1] || 'FISHI-managed project',
+        projectType: (typeMatch2?.[1] as any) || 'greenfield',
+        costMode: 'balanced' as const,
+        timestamp: new Date().toISOString(),
+      };
+
+      const coordDir = path.join(agentsDir, 'coordinators');
+      if (!fs.existsSync(coordDir)) fs.mkdirSync(coordDir, { recursive: true });
+
+      const agentFiles: [string, string][] = [
+        ['master-orchestrator.md', getMasterOrchestratorTemplate()],
+        ['coordinators/planning-lead.md', planningLeadTemplate(ctx)],
+        ['coordinators/dev-lead.md', devLeadTemplate(ctx)],
+        ['coordinators/quality-lead.md', qualityLeadTemplate(ctx)],
+        ['coordinators/ops-lead.md', opsLeadTemplate(ctx)],
+        ['research-agent.md', researchAgentTemplate(ctx)],
+        ['planning-agent.md', planningAgentTemplate(ctx)],
+        ['architect-agent.md', architectAgentTemplate(ctx)],
+        ['backend-agent.md', backendAgentTemplate(ctx)],
+        ['frontend-agent.md', frontendAgentTemplate(ctx)],
+        ['uiux-agent.md', uiuxAgentTemplate(ctx)],
+        ['fullstack-agent.md', fullstackAgentTemplate(ctx)],
+        ['devops-agent.md', devopsAgentTemplate(ctx)],
+        ['testing-agent.md', testingAgentTemplate(ctx)],
+        ['security-agent.md', securityAgentTemplate(ctx)],
+        ['docs-agent.md', docsAgentTemplate(ctx)],
+        ['writing-agent.md', writingAgentTemplate(ctx)],
+        ['marketing-agent.md', marketingAgentTemplate(ctx)],
+        ['deep-research-agent.md', getDeepResearchAgentTemplate()],
+      ];
+
+      for (const [filename, content] of agentFiles) {
+        fs.writeFileSync(path.join(agentsDir, filename), content, 'utf-8');
+      }
+      updated.push(`.claude/agents/ (${agentFiles.length} agents regenerated with latest templates)`);
+    } catch {
+      // Skip if agent regeneration fails
+    }
+  }
+
+  // 17. Initialize worktree-log.yaml if missing
   const worktreeLogPath = path.join(targetDir, '.fishi', 'state', 'worktree-log.yaml');
   if (!fs.existsSync(worktreeLogPath)) {
     fs.writeFileSync(worktreeLogPath, 'worktrees:\n', 'utf-8');

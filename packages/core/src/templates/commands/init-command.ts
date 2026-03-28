@@ -242,7 +242,65 @@ Ask: "Sprint {N} complete. Approve to start Sprint {N+1}?"
 
 Repeat for all sprints.
 
-## Step 8: Deployment Phase
+\`\`\`bash
+node .fishi/scripts/gate-manager.mjs create --phase development --description "Development complete — all sprints done"
+\`\`\`
+
+<HARD-GATE>
+STOP HERE. Present development summary to user. All sprints must be complete.
+Ask: "Development complete. Approve to proceed to QA & Security review?"
+</HARD-GATE>
+
+## Step 8: QA & Security Phase
+
+\`\`\`bash
+node .fishi/scripts/phase-runner.mjs set --phase qa_security
+\`\`\`
+
+Dispatch quality-lead to run the full quality and security review:
+\`\`\`
+Use the Agent tool with:
+  subagent_type: "quality-lead"
+  model: "sonnet"
+  prompt: "Run full QA & Security review for the project.
+
+QUALITY CHECKS:
+1. Run the full test suite — all tests must pass
+2. Check test coverage — flag any uncovered critical paths
+3. Review code quality across all agent outputs
+
+SECURITY AUDIT:
+1. Dispatch security-agent to run OWASP Top 10 review
+2. Check for hardcoded secrets, SQL injection, XSS, CSRF
+3. Review authentication and authorization flows
+4. Check dependency vulnerabilities (npm audit / equivalent)
+
+Save report to .fishi/plans/qa_security/report.md
+Report: STATUS (pass/fail), ISSUES (list), RECOMMENDATIONS"
+\`\`\`
+
+If issues are found, dispatch agents to fix them:
+\`\`\`
+Use the Agent tool with:
+  subagent_type: "{appropriate-agent}"
+  model: "sonnet"
+  isolation: "worktree"
+  prompt: "Fix {issue} identified in QA/Security review.
+           See .fishi/plans/qa_security/report.md for details."
+\`\`\`
+
+Re-run QA checks until all issues are resolved.
+
+\`\`\`bash
+node .fishi/scripts/gate-manager.mjs create --phase qa_security --description "QA & Security approval"
+\`\`\`
+
+<HARD-GATE>
+STOP HERE. Present QA & Security report to user.
+Ask: "QA & Security review complete. Approve to proceed to deployment?"
+</HARD-GATE>
+
+## Step 9: Deployment Phase
 
 Dispatch ops-lead for deployment setup.
 

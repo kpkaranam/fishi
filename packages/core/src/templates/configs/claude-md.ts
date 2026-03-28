@@ -110,6 +110,7 @@ Use the Agent tool with:
 ## Pipeline State
 Read \`.fishi/state/project.yaml\` for current phase.
 Use \`/fishi-init\` to start or resume the pipeline.
+Phases: init → discovery → PRD → architecture → sprint_planning → development → qa_security → deployment → deployed
 Rules: \`.claude/rules/\` (pipeline, delegation, safety, conventions)
 
 ## Conventions

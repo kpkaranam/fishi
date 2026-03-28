@@ -129,7 +129,7 @@ describe('E2E Pipeline Tests', () => {
       const result = runJSON('phase-runner.mjs', ['current']);
       expect(result.phase).toBe('init');
       expect(result.index).toBe(0);
-      expect(result.total_phases).toBe(8);
+      expect(result.total_phases).toBe(9);
       expect(result.progress).toBe('0%');
     });
 
@@ -152,6 +152,7 @@ describe('E2E Pipeline Tests', () => {
       expect(output).toContain('architecture');
       expect(output).toContain('sprint_planning');
       expect(output).toContain('development');
+      expect(output).toContain('qa_security');
       expect(output).toContain('deployment');
       expect(output).toContain('deployed');
     });
