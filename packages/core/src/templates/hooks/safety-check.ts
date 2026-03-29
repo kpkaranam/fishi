@@ -17,7 +17,7 @@ import { readFileSync } from 'fs';
  */
 function readStdin() {
   try {
-    return readFileSync('/dev/stdin', 'utf-8');
+    return readFileSync(0, 'utf-8');
   } catch {
     try {
       return readFileSync(0, 'utf-8');

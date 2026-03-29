@@ -21,7 +21,7 @@ const projectRoot = process.env.FISHI_PROJECT_ROOT || process.cwd();
  */
 function readStdin() {
   try {
-    return readFileSync('/dev/stdin', 'utf-8');
+    return readFileSync(0, 'utf-8');
   } catch {
     try {
       return readFileSync(0, 'utf-8');

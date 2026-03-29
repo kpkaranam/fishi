@@ -12,7 +12,7 @@ const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
 // Read failure data from stdin
 let input = '';
 try {
-  input = readFileSync('/dev/stdin', 'utf-8').trim();
+  input = readFileSync(0, 'utf-8').trim();
 } catch {
   process.exit(0);
 }

@@ -22,7 +22,7 @@ const logsDir = join(projectRoot, '.fishi', 'logs', 'agents');
  */
 function readStdin() {
   try {
-    return readFileSync('/dev/stdin', 'utf-8');
+    return readFileSync(0, 'utf-8');
   } catch {
     // On Windows or if stdin is not available, try fd 0
     try {

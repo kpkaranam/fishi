@@ -20,7 +20,7 @@ const stateFile = join(ROOT, '.fishi', 'state', 'project.yaml');
 // Read tool input from stdin
 let input = '';
 try {
-  input = readFileSync('/dev/stdin', 'utf-8').trim();
+  input = readFileSync(0, 'utf-8').trim();
 } catch {
   // No stdin available — allow action
   process.exit(0);

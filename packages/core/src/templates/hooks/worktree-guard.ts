@@ -35,7 +35,7 @@ const ENFORCED_PHASES = ['development', 'qa_security'];
 // Read tool input from stdin
 let input = '';
 try {
-  input = readFileSync('/dev/stdin', 'utf-8').trim();
+  input = readFileSync(0, 'utf-8').trim();
 } catch {
   process.exit(0); // No stdin — allow
 }

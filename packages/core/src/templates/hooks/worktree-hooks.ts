@@ -13,7 +13,7 @@ const LOG_PATH = join(ROOT, '.fishi', 'state', 'worktree-log.yaml');
 // Read event data from stdin
 let input = '';
 try {
-  input = readFileSync('/dev/stdin', 'utf-8').trim();
+  input = readFileSync(0, 'utf-8').trim();
 } catch {
   input = '{}';
 }

@@ -10,7 +10,7 @@ const { join, dirname } = require('path');
 // Read JSON from stdin synchronously (Claude Code sends all data at once)
 let input = '';
 try {
-  input = require('fs').readFileSync('/dev/stdin', 'utf-8');
+  input = require('fs').readFileSync(0, 'utf-8');
 } catch {
   try {
     input = require('fs').readFileSync(0, 'utf-8'); // fd 0 = stdin
