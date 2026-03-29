@@ -32,6 +32,8 @@ if (error.includes('Permission') || error.includes('timeout')) {
   process.exit(0);
 }
 
+console.log(\`[FISHI] Failure logged: \${toolName} — \${error.substring(0, 100)}\`);
+
 // Record to learnings
 try {
   const { execSync } = await import('child_process');

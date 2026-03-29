@@ -21,3 +21,4 @@ export { getTaskCompletedHook } from './task-completed-hook';
 export { getSessionEndHook } from './session-end-hook';
 export { getFailureLoggerHook } from './failure-logger';
 export { getWorktreeGuardHook } from './worktree-guard';
+export { getSprintCompletionGuardHook } from './sprint-completion-guard';

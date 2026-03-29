@@ -12,9 +12,9 @@ export function getPhaseGuardHook(): string {
 // Zero dependencies: uses only Node.js built-ins.
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve, normalize } from 'path';
 
-const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
+const ROOT = normalize(process.env.FISHI_PROJECT_ROOT || process.cwd());
 const stateFile = join(ROOT, '.fishi', 'state', 'project.yaml');
 
 // Read tool input from stdin
@@ -36,8 +36,6 @@ try {
   // file_path may be top-level or nested under tool_input
   const ti = parsed.tool_input || {};
   filePath = ti.file_path || ti.path || parsed.file_path || parsed.path || '';
-  // Normalize backslashes to forward slashes for cross-platform matching
-  filePath = filePath.replace(/\\\\\\\\/g, '/');
 } catch {
   // If not JSON, try to extract from env
   toolName = process.env.CLAUDE_TOOL_NAME || '';
@@ -49,9 +47,38 @@ if (!['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
   process.exit(0);
 }
 
+// Issue 1: Empty file_path — fail-open (the Write/Edit tool itself validates paths)
+if (!filePath || filePath.trim() === '') {
+  process.exit(0);
+}
+
+// Normalize path separators for cross-platform matching
+const normalizedPath = filePath.replace(/\\\\\\\\/g, '/');
+
+// Issue 2: Paths outside project root (e.g., ~/.claude/projects/ memory files)
+const normalizedRoot = ROOT.replace(/\\\\\\\\/g, '/');
+if (normalizedPath.startsWith('/') || /^[A-Za-z]:/.test(normalizedPath)) {
+  // Absolute path — check if it's inside the project
+  if (!normalizedPath.startsWith(normalizedRoot)) {
+    process.exit(0); // Outside project — not our concern
+  }
+}
+
 // Allow writes to FISHI infrastructure files
-const fishiPaths = ['.fishi/', '.claude/', 'SOUL.md', 'AGENTS.md', 'CLAUDE.md', '.mcp.json', '.gitignore'];
-if (fishiPaths.some(p => filePath.includes(p))) {
+const infraPatterns = ['.fishi/', '.claude/', 'SOUL.md', 'AGENTS.md', 'CLAUDE.md', '.mcp.json', '.gitignore', '.github/'];
+if (infraPatterns.some(p => normalizedPath.includes(p))) {
+  process.exit(0);
+}
+
+// Allow common build/config files across all languages
+const configFiles = [
+  'package.json', 'package-lock.json', 'tsconfig', '.eslintrc', '.prettierrc',
+  'next.config', 'vite.config', 'astro.config', '.env', 'pnpm-lock', 'yarn.lock', 'bun.lockb',
+  'go.mod', 'go.sum', 'Cargo.toml', 'Cargo.lock', 'Makefile', 'Dockerfile',
+  'docker-compose', 'pyproject.toml', 'setup.py', 'requirements.txt', 'Gemfile',
+  '.goreleaser', '.golangci', 'jest.config', 'vitest.config', 'playwright.config',
+];
+if (configFiles.some(c => normalizedPath.includes(c))) {
   process.exit(0);
 }
 
@@ -69,46 +96,52 @@ try {
   process.exit(0);
 }
 
+// Issue 3: Allow merge conflict resolution in any phase
+try {
+  if (existsSync(filePath) || existsSync(resolve(ROOT, filePath))) {
+    const target = existsSync(filePath) ? filePath : resolve(ROOT, filePath);
+    const content = readFileSync(target, 'utf-8');
+    if (content.includes('<<<<<<<') || content.includes('>>>>>>>')) {
+      process.exit(0); // Merge conflict — always allow resolution
+    }
+  }
+} catch {}
+
 // Phase rules
 const planningPhases = ['init', 'discovery', 'prd', 'architecture', 'sprint_planning'];
-const deployPhases = ['deployment', 'deployed'];
 
 if (planningPhases.includes(phase)) {
   // Block application code writes during planning phases
-  // Allow: docs, plans, PRDs, markdown, yaml
-  const allowedExtensions = ['.md', '.yaml', '.yml', '.json', '.txt'];
-  const hasAllowedExt = allowedExtensions.some(ext => filePath.endsWith(ext));
+  // Allow: docs, plans, PRDs, markdown, yaml, json, txt
+  const allowedExtensions = ['.md', '.yaml', '.yml', '.json', '.txt', '.toml'];
+  const hasAllowedExt = allowedExtensions.some(ext => normalizedPath.endsWith(ext));
 
   if (!hasAllowedExt) {
     console.error(\`[FISHI PHASE GUARD] Blocked: Cannot write application code during "\${phase}" phase.\`);
     console.error(\`  File: \${filePath}\`);
     console.error(\`  Current phase only allows: documentation, plans, and configuration files.\`);
     console.error(\`  To advance: node .fishi/scripts/gate-manager.mjs approve --phase \${phase}\`);
-    process.exit(2); // Exit code 2 = block the action
+    process.exit(2);
   }
 }
 
 if (phase === 'development' || phase === 'qa_security') {
   // During development/QA, BLOCK code writes outside a worktree
-  if (!filePath.includes('.trees/') && !filePath.includes('.trees\\\\')) {
-    // Allow root config files that legitimately need editing
-    const rootConfigs = ['package.json', 'package-lock.json', 'tsconfig', '.eslintrc', '.prettierrc', 'next.config', 'vite.config', 'astro.config', '.env', 'pnpm-lock', 'yarn.lock', 'bun.lockb'];
-    const isRootConfig = rootConfigs.some(c => filePath.includes(c));
-
+  if (!normalizedPath.includes('.trees/')) {
     // Allow documentation and plan files
-    const allowedExtensions = ['.md', '.yaml', '.yml', '.txt'];
-    const hasAllowedExt = allowedExtensions.some(ext => filePath.endsWith(ext));
+    const allowedExtensions = ['.md', '.yaml', '.yml', '.txt', '.toml'];
+    const hasAllowedExt = allowedExtensions.some(ext => normalizedPath.endsWith(ext));
 
     // Allow test result/report files
-    const isTestOutput = filePath.includes('coverage/') || filePath.includes('test-results/') || filePath.includes('.fishi/quality/');
+    const isTestOutput = ['coverage/', 'test-results/', '.fishi/quality/', '__snapshots__/'].some(p => normalizedPath.includes(p));
 
-    if (!isRootConfig && !hasAllowedExt && !isTestOutput) {
+    if (!hasAllowedExt && !isTestOutput) {
       console.error(\`[FISHI PHASE GUARD] BLOCKED: Cannot write application code outside a worktree during "\${phase}" phase.\`);
       console.error(\`  File: \${filePath}\`);
       console.error(\`  All code changes during development MUST happen in an agent worktree.\`);
       console.error(\`  Create a worktree first:\`);
       console.error(\`  node .fishi/scripts/worktree-manager.mjs create --agent {agent} --task {task} --coordinator dev-lead\`);
-      process.exit(2); // Exit code 2 = BLOCK the action
+      process.exit(2);
     }
   }
 }

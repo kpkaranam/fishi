@@ -55,6 +55,7 @@ import {
   writingAgentTemplate,
   marketingAgentTemplate,
   getDeepResearchAgentTemplate,
+  getSprintCompletionGuardHook,
 } from '@qlucent/fishi-core';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -251,6 +252,7 @@ export async function upgradeCommand(): Promise<void> {
     { name: 'session-end-hook.mjs', getter: getSessionEndHook },
     { name: 'failure-logger.mjs', getter: getFailureLoggerHook },
     { name: 'fishi-statusline.js', getter: getStatuslineScript },
+    { name: 'sprint-completion-guard.mjs', getter: getSprintCompletionGuardHook },
   ];
 
   const scriptsDir = path.join(targetDir, '.fishi', 'scripts');

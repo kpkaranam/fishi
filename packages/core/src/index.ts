@@ -104,6 +104,7 @@ export {
   getSessionEndHook,
   getFailureLoggerHook,
   getWorktreeGuardHook,
+  getSprintCompletionGuardHook,
 } from './templates/hooks/index';
 
 // Command templates

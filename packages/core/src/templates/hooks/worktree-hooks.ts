@@ -58,6 +58,9 @@ const dir = dirname(LOG_PATH);
 if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 writeFileSync(LOG_PATH, yaml, 'utf-8');
 
+// Output success for Claude Code hook system
+console.log(\`[FISHI] Worktree \${action}: \${worktreeBranch || worktreeName}\`);
+
 // Also emit monitor event
 try {
   const emitterUrl = new URL('./monitor-emitter.mjs', import.meta.url).href;

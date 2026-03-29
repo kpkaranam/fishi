@@ -71,6 +71,10 @@ export function getSettingsJsonTemplate(): string {
               type: "command",
               command: "node .fishi/scripts/worktree-guard.mjs",
             },
+            {
+              type: "command",
+              command: "node .fishi/scripts/sprint-completion-guard.mjs",
+            },
           ],
         },
       ],

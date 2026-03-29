@@ -38,6 +38,7 @@ try {
   }
 } catch {}
 
+console.log('[FISHI] Session ended — context updated');
 process.exit(0);
 `;
 }

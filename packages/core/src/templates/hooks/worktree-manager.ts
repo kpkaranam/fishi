@@ -10,7 +10,7 @@ export function getWorktreeManagerScript(): string {
   return `#!/usr/bin/env node
 // worktree-manager.mjs — FISHI worktree lifecycle manager
 // Uses Node.js built-ins only (fs, path, child_process)
-import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join, resolve } from 'path';
 import { execSync } from 'child_process';
 
@@ -158,6 +158,17 @@ function cmdCreate() {
       baseBranch = 'main';
     } catch {
       baseBranch = 'master';
+    }
+  }
+
+  // Safety: ensure main repo is on the base branch (not an agent branch)
+  const currentMainBranch = run('git rev-parse --abbrev-ref HEAD');
+  if (currentMainBranch.startsWith('agent/')) {
+    try {
+      run(\`git checkout \${baseBranch}\`);
+      process.stderr.write(\`[FISHI] Main repo was on agent branch \${currentMainBranch} — switched to \${baseBranch}\\n\`);
+    } catch {
+      fail(\`Main repo is on agent branch \${currentMainBranch} and cannot switch to \${baseBranch}. Fix manually: git checkout \${baseBranch}\`);
     }
   }
 
@@ -344,12 +355,18 @@ function cmdMerge() {
     }
   }
 
-  // Checkout target branch in main repo and merge
+  // Ensure main repo is on the target branch before merging
+  const currentBranch = run('git rev-parse --abbrev-ref HEAD');
   try {
-    run(\`git checkout \${targetBranch}\`);
+    if (currentBranch !== targetBranch) {
+      run(\`git checkout \${targetBranch}\`);
+    }
     run(\`git merge --no-ff \${branch} -m "Merge \${branch} into \${targetBranch}"\`);
   } catch (err) {
-    fail(\`Merge failed: \${err.message}\`);
+    // If merge fails, ensure we're back on the target branch
+    try { run(\`git merge --abort\`); } catch {}
+    try { run(\`git checkout \${targetBranch}\`); } catch {}
+    fail(\`Merge failed: \${err.message}. Main repo restored to \${targetBranch}.\`);
   }
 
   // Emit monitoring event
@@ -380,15 +397,19 @@ function cmdCleanup() {
     branch = null;
   }
 
-  // Remove worktree
+  // Remove worktree (--force handles untracked files like go.sum, build artifacts)
   try {
     run(\`git worktree remove \${treePath} --force\`);
-  } catch (err) {
-    // Try manual cleanup if git worktree remove fails
+  } catch {
+    // Fallback: manual removal + prune (handles cases git worktree remove can't)
     try {
+      if (existsSync(absTreePath)) {
+        rmSync(absTreePath, { recursive: true, force: true });
+      }
       run(\`git worktree prune\`);
     } catch {
-      // Ignore
+      // Last resort — just prune
+      try { run(\`git worktree prune\`); } catch {}
     }
   }
 
@@ -413,7 +434,9 @@ function cmdCleanup() {
           run(\`git merge --no-ff \${branch} -m "Merge \${branch} into \${targetBranch} (auto-merge on cleanup)"\`);
           run(\`git branch -d \${branch}\`);
         } catch {
-          // Merge failed — preserve the branch, do NOT delete
+          // Merge failed — abort merge, restore target branch, preserve the agent branch
+          try { run(\`git merge --abort\`); } catch {}
+          try { run(\`git checkout \${targetBranch}\`); } catch {}
           process.stderr.write(\`WARNING: Branch \${branch} has unmerged work and merge failed. Branch preserved — merge manually.\\n\`);
         }
       } else {
