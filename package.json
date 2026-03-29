@@ -12,9 +12,13 @@
     "build:cli": "npm run build -w packages/cli",
     "test": "npm run test --workspaces",
     "clean": "npm run clean --workspaces",
-    "dev": "npm run dev -w packages/cli"
+    "dev": "npm run dev -w packages/cli",
+    "bump": "node scripts/bump-version.mjs"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "code-dna": "^1.2.0"
   }
 }
