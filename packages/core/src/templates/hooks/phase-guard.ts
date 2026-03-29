@@ -27,12 +27,17 @@ try {
 }
 
 // Parse tool name and arguments
+// Claude Code sends: { tool_name, tool_input: { file_path, ... } }
 let toolName = '';
 let filePath = '';
 try {
   const parsed = JSON.parse(input);
   toolName = parsed.tool_name || parsed.tool || '';
-  filePath = parsed.file_path || parsed.path || '';
+  // file_path may be top-level or nested under tool_input
+  const ti = parsed.tool_input || {};
+  filePath = ti.file_path || ti.path || parsed.file_path || parsed.path || '';
+  // Normalize backslashes to forward slashes for cross-platform matching
+  filePath = filePath.replace(/\\\\\\\\/g, '/');
 } catch {
   // If not JSON, try to extract from env
   toolName = process.env.CLAUDE_TOOL_NAME || '';

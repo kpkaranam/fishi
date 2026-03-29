@@ -41,14 +41,16 @@ try {
 }
 
 // Parse the Agent tool parameters
+// Claude Code sends: { tool_name, tool_input: { subagent_type, isolation, prompt, ... } }
 let agentType = '';
 let hasIsolation = false;
 let prompt = '';
 try {
   const parsed = JSON.parse(input);
-  agentType = parsed.subagent_type || parsed.agent_type || '';
-  hasIsolation = parsed.isolation === 'worktree';
-  prompt = parsed.prompt || '';
+  const ti = parsed.tool_input || parsed;
+  agentType = ti.subagent_type || ti.agent_type || parsed.subagent_type || '';
+  hasIsolation = (ti.isolation || parsed.isolation) === 'worktree';
+  prompt = ti.prompt || parsed.prompt || '';
 } catch {
   process.exit(0); // Can't parse — allow
 }
