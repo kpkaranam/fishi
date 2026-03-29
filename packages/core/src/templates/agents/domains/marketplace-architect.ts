@@ -4,6 +4,13 @@ name: marketplace-architect
 description: >
   Specialized architect for marketplace and platform applications.
   Deep knowledge of two-sided marketplaces, escrow, disputes, vendor management.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 model: opus
 role: worker
 reports_to: planning-lead

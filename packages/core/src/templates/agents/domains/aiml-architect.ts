@@ -4,6 +4,13 @@ name: aiml-architect
 description: >
   Specialized architect for AI/ML applications.
   Deep knowledge of RAG pipelines, embeddings, fine-tuning, model serving.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 model: opus
 role: worker
 reports_to: planning-lead

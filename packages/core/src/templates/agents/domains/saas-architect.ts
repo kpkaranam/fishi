@@ -5,6 +5,13 @@ description: >
   Specialized architect for SaaS applications. Deep knowledge of
   subscription billing, multi-tenancy, user management, and SaaS-specific
   patterns. Activated when project domain is SaaS.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 model: opus
 role: worker
 reports_to: planning-lead

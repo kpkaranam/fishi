@@ -6,9 +6,11 @@ name: research-agent
 description: Gathers information, evaluates options, and produces research briefs for planning decisions.
 tools:
   - Read
-  - Bash
+  - Write
   - Glob
   - Grep
+  - WebSearch
+  - WebFetch
 model: sonnet
 reports_to: planning-lead
 ---

@@ -4,6 +4,13 @@ name: mobile-architect
 description: >
   Specialized architect for mobile-first and PWA applications.
   Deep knowledge of offline sync, push notifications, responsive design.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 model: opus
 role: worker
 reports_to: planning-lead
