@@ -392,16 +392,37 @@ function cmdCleanup() {
     }
   }
 
-  // Delete the branch
+  // Delete the branch — but ONLY if merged or --force is passed
   if (branch && branch !== 'HEAD') {
     try {
       run(\`git branch -d \${branch}\`);
     } catch {
-      // Branch may have unmerged changes — try force delete
-      try {
-        run(\`git branch -D \${branch}\`);
-      } catch {
-        // Ignore — branch may already be gone
+      // Branch has unmerged changes — auto-merge before deleting
+      const forceFlag = process.argv.includes('--force');
+      if (!forceFlag) {
+        // Try to merge the branch into the main branch first
+        let targetBranch = 'master';
+        try { run('git rev-parse --verify dev'); targetBranch = 'dev'; } catch {
+          try { run('git rev-parse --verify main'); targetBranch = 'main'; } catch {}
+        }
+        try {
+          const currentBranch = run('git rev-parse --abbrev-ref HEAD');
+          if (currentBranch !== targetBranch) {
+            run(\`git checkout \${targetBranch}\`);
+          }
+          run(\`git merge --no-ff \${branch} -m "Merge \${branch} into \${targetBranch} (auto-merge on cleanup)"\`);
+          run(\`git branch -d \${branch}\`);
+        } catch {
+          // Merge failed — preserve the branch, do NOT delete
+          process.stderr.write(\`WARNING: Branch \${branch} has unmerged work and merge failed. Branch preserved — merge manually.\\n\`);
+        }
+      } else {
+        // --force: delete even if unmerged (user explicitly chose this)
+        try {
+          run(\`git branch -D \${branch}\`);
+        } catch {
+          // Ignore — branch may already be gone
+        }
       }
     }
   }
