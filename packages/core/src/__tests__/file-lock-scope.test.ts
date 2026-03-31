@@ -120,7 +120,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('.fishi/ paths are exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', '.fishi/config.yaml', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', '.fishi/config.yaml', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -128,7 +128,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('docs/ paths are exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'docs/readme.md', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'docs/readme.md', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -136,7 +136,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('.claude/ paths are exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', '.claude/settings.json', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', '.claude/settings.json', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -144,7 +144,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('root-level .md files are exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'README.md', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'README.md', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -152,7 +152,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('.mcp.json is exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', '.mcp.json', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', '.mcp.json', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -160,7 +160,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('package.json is exempt', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'package.json', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'package.json', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -168,7 +168,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('non-exempt path blocked by different agent', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'src/app.ts', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'src/app.ts', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(2);
       expect(data.status).toBe('blocked');
@@ -176,7 +176,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('owning agent is allowed', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'src/app.ts', '--agent', 'agent-1', '--task', 'task-1'
+        'check', '--file', 'src/app.ts', '--agent', 'agent-1'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -184,7 +184,7 @@ describe('File Lock Scope (hook script)', () => {
 
     it('unlocked file is allowed', () => {
       const { data, exitCode } = runJSON(
-        'check', '--files', 'src/other.ts', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'src/other.ts', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -197,7 +197,7 @@ describe('File Lock Scope (hook script)', () => {
     it('file inside directory scope is blocked for other agent', () => {
       runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-1', '--scope', 'src/api/');
       const { data, exitCode } = runJSON(
-        'check', '--files', 'src/api/handler.ts', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'src/api/handler.ts', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(2);
       expect(data.status).toBe('blocked');
@@ -206,7 +206,7 @@ describe('File Lock Scope (hook script)', () => {
     it('file outside directory scope is allowed', () => {
       runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-1', '--scope', 'src/api/');
       const { data, exitCode } = runJSON(
-        'check', '--files', 'src/utils/helper.ts', '--agent', 'agent-2', '--task', 'task-2'
+        'check', '--file', 'src/utils/helper.ts', '--agent', 'agent-2'
       );
       expect(exitCode).toBe(0);
       expect(data.status).toBe('allowed');
@@ -216,13 +216,25 @@ describe('File Lock Scope (hook script)', () => {
   // --- release --task ---
 
   describe('release --task', () => {
-    it('releases all locks for a given task ID', () => {
+    it('releases all locks for a given task ID with --agent', () => {
       runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-1', '--scope', 'src/api/,src/utils/');
       runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-2', '--scope', 'src/models/');
       const { data, exitCode } = runJSON('release', '--agent', 'agent-1', '--task', 'task-1');
       expect(exitCode).toBe(0);
       expect(data.released).toContain('src/api/');
       expect(data.released).toContain('src/utils/');
+      expect(data.released).not.toContain('src/models/');
+      expect(data.remaining).toBe(1);
+    });
+
+    it('release --task standalone works without --agent', () => {
+      runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-1', '--scope', 'src/api/');
+      runJSON('lock-scope', '--agent', 'agent-2', '--task', 'task-1', '--scope', 'src/other/');
+      runJSON('lock-scope', '--agent', 'agent-1', '--task', 'task-2', '--scope', 'src/models/');
+      const { data, exitCode } = runJSON('release', '--task', 'task-1');
+      expect(exitCode).toBe(0);
+      expect(data.released).toContain('src/api/');
+      expect(data.released).toContain('src/other/');
       expect(data.released).not.toContain('src/models/');
       expect(data.remaining).toBe(1);
     });

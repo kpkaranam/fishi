@@ -3,10 +3,11 @@ export function getFileLockHookScript(): string {
 // file-lock-hook.mjs — FISHI File Lock Manager
 // Prevents worktree conflicts by locking files/directories before agent assignment.
 // Usage:
-//   node .fishi/scripts/file-lock-hook.mjs check --files "src/a.ts,src/b.ts" --agent backend-agent --task auth
+//   node .fishi/scripts/file-lock-hook.mjs check --file "src/a.ts" --agent backend-agent
 //   node .fishi/scripts/file-lock-hook.mjs lock --files "src/a.ts" --agent backend-agent --task auth --coordinator dev-lead
 //   node .fishi/scripts/file-lock-hook.mjs lock-scope --agent backend-agent --task auth --scope "src/api/,src/utils/"
 //   node .fishi/scripts/file-lock-hook.mjs release --agent backend-agent [--task auth]
+//   node .fishi/scripts/file-lock-hook.mjs release --task auth
 //   node .fishi/scripts/file-lock-hook.mjs status
 //   node .fishi/scripts/file-lock-hook.mjs agent-locks --agent backend-agent
 
@@ -120,14 +121,11 @@ function findOverlaps(newPaths, locks, agent, task) {
 const { cmd, opts } = parseArgs();
 
 if (cmd === 'check') {
-  if (!opts.files || !opts.agent || !opts.task) fail('Usage: check --files "a,b" --agent X --task Y');
-  const files = opts.files.split(',').map(f => f.trim());
+  if (!opts.file || !opts.agent) fail('Usage: check --file "path" --agent X');
+  const file = opts.file.trim();
   const locks = readLocks();
 
-  // Check each file — first exempt file wins with allowed
-  for (const file of files) {
-    if (isExempt(file)) continue;
-    // Check exact match and directory scope match
+  if (!isExempt(file)) {
     const locked = locks.find(l => {
       if (l.agent === opts.agent) return false;
       // Exact match
@@ -199,16 +197,18 @@ if (cmd === 'check') {
   out({ success: true, locked: files, agent: opts.agent, task: opts.task });
 
 } else if (cmd === 'release') {
-  if (!opts.agent) fail('Usage: release --agent X [--task Y]');
+  if (!opts.agent && !opts.task) fail('Usage: release --agent X [--task Y] OR release --task Y');
   const locks = readLocks();
   const released = [];
   const remaining = [];
   for (const l of locks) {
-    if (l.agent === opts.agent && (!opts.task || l.task === opts.task)) released.push(l.file);
+    const agentMatch = !opts.agent || l.agent === opts.agent;
+    const taskMatch = !opts.task || l.task === opts.task;
+    if (agentMatch && taskMatch) released.push(l.file);
     else remaining.push(l);
   }
   writeLocks(remaining);
-  out({ released, agent: opts.agent, remaining: remaining.length });
+  out({ released, agent: opts.agent || null, task: opts.task || null, remaining: remaining.length });
 
 } else if (cmd === 'status') {
   const locks = readLocks();
