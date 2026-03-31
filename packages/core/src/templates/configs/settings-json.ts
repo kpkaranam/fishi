@@ -65,6 +65,15 @@ export function getSettingsJsonTemplate(): string {
           ],
         },
         {
+          matcher: "Write|Edit",
+          hooks: [
+            {
+              type: "command",
+              command: "node .fishi/scripts/file-lock-hook.mjs check",
+            },
+          ],
+        },
+        {
           matcher: "Agent",
           hooks: [
             {
