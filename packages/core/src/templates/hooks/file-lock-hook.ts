@@ -1,10 +1,11 @@
 export function getFileLockHookScript(): string {
   return `#!/usr/bin/env node
 // file-lock-hook.mjs — FISHI File Lock Manager
-// Prevents worktree conflicts by locking files before agent assignment.
+// Prevents worktree conflicts by locking files/directories before agent assignment.
 // Usage:
 //   node .fishi/scripts/file-lock-hook.mjs check --files "src/a.ts,src/b.ts" --agent backend-agent --task auth
 //   node .fishi/scripts/file-lock-hook.mjs lock --files "src/a.ts" --agent backend-agent --task auth --coordinator dev-lead
+//   node .fishi/scripts/file-lock-hook.mjs lock-scope --agent backend-agent --task auth --scope "src/api/,src/utils/"
 //   node .fishi/scripts/file-lock-hook.mjs release --agent backend-agent [--task auth]
 //   node .fishi/scripts/file-lock-hook.mjs status
 //   node .fishi/scripts/file-lock-hook.mjs agent-locks --agent backend-agent
@@ -75,27 +76,113 @@ function parseArgs() {
   return { cmd, opts };
 }
 
+// Check if a path is exempt from lock enforcement
+function isExempt(filePath) {
+  if (filePath.startsWith('.fishi/')) return true;
+  if (filePath.startsWith('.claude/')) return true;
+  if (filePath.startsWith('docs/')) return true;
+  if (filePath === '.mcp.json') return true;
+  if (filePath === 'package.json') return true;
+  // Root-level .md files: no '/' in path and ends with .md
+  if (!filePath.includes('/') && filePath.endsWith('.md')) return true;
+  return false;
+}
+
+// Check overlap between two paths (either can be a file or directory scope)
+// Directory scopes end with '/'
+function pathsOverlap(a, b) {
+  if (a === b) return true;
+  const aIsDir = a.endsWith('/');
+  const bIsDir = b.endsWith('/');
+  // Exact file inside directory scope
+  if (aIsDir && !bIsDir && b.startsWith(a)) return true;
+  if (bIsDir && !aIsDir && a.startsWith(b)) return true;
+  // Nested directory scopes (one is prefix of the other)
+  if (aIsDir && bIsDir && (a.startsWith(b) || b.startsWith(a))) return true;
+  return false;
+}
+
+// Find overlaps between a set of new paths and existing locks from OTHER tasks
+function findOverlaps(newPaths, locks, agent, task) {
+  const overlaps = [];
+  for (const p of newPaths) {
+    for (const l of locks) {
+      // Skip locks from the same task
+      if (l.agent === agent && l.task === task) continue;
+      if (pathsOverlap(p, l.file)) {
+        overlaps.push({ path: p, conflictsWith: l.file, lockedBy: l.agent, lockedTask: l.task });
+      }
+    }
+  }
+  return overlaps;
+}
+
 const { cmd, opts } = parseArgs();
 
 if (cmd === 'check') {
   if (!opts.files || !opts.agent || !opts.task) fail('Usage: check --files "a,b" --agent X --task Y');
   const files = opts.files.split(',').map(f => f.trim());
   const locks = readLocks();
-  const conflicts = [];
+
+  // Check each file — first exempt file wins with allowed
   for (const file of files) {
-    const locked = locks.find(l => l.file === file && l.agent !== opts.agent);
-    if (locked) conflicts.push({ file, lockedBy: locked.agent, lockedTask: locked.task, lockedAt: locked.lockedAt });
+    if (isExempt(file)) continue;
+    // Check exact match and directory scope match
+    const locked = locks.find(l => {
+      if (l.agent === opts.agent) return false;
+      // Exact match
+      if (l.file === file) return true;
+      // File falls inside a directory scope lock
+      if (l.file.endsWith('/') && file.startsWith(l.file)) return true;
+      return false;
+    });
+    if (locked) {
+      out({ status: 'blocked', file, lockedBy: locked.agent, lockedTask: locked.task, lockedAt: locked.lockedAt });
+      process.exit(2);
+    }
   }
-  out({ conflicts, hasConflicts: conflicts.length > 0 });
+  out({ status: 'allowed' });
+
+} else if (cmd === 'lock-scope') {
+  if (!opts.agent || !opts.task || !opts.scope) fail('Usage: lock-scope --agent X --task Y --scope "dir/,file.ts"');
+  const paths = opts.scope.split(',').map(f => f.trim()).filter(Boolean);
+  const locks = readLocks();
+
+  // Find overlaps with other tasks' locks
+  const overlaps = findOverlaps(paths, locks, opts.agent, opts.task);
+  if (overlaps.length > 0) {
+    out({ status: 'conflict', overlaps });
+    process.exit(1);
+  }
+
+  // Add new paths (skip duplicates for same agent+task)
+  const now = new Date().toISOString();
+  const added = [];
+  for (const p of paths) {
+    if (!locks.some(l => l.file === p && l.agent === opts.agent && l.task === opts.task)) {
+      locks.push({ file: p, agent: opts.agent, task: opts.task, coordinator: '', lockedAt: now });
+      added.push(p);
+    }
+  }
+  writeLocks(locks);
+  out({ success: true, locked: added, agent: opts.agent, task: opts.task });
 
 } else if (cmd === 'lock') {
   if (!opts.files || !opts.agent || !opts.task) fail('Usage: lock --files "a,b" --agent X --task Y --coordinator Z');
   const files = opts.files.split(',').map(f => f.trim());
   const locks = readLocks();
-  // Check conflicts first
+  // Check conflicts — exact match AND directory scope overlap with other agents
   const conflicts = [];
   for (const f of files) {
-    const locked = locks.find(l => l.file === f && l.agent !== opts.agent);
+    const locked = locks.find(l => {
+      if (l.agent === opts.agent) return false;
+      if (l.file === f) return true;
+      // File falls inside a directory scope lock from another agent
+      if (l.file.endsWith('/') && f.startsWith(l.file)) return true;
+      // New file is a dir scope and existing lock is inside it
+      if (f.endsWith('/') && l.file.startsWith(f)) return true;
+      return false;
+    });
     if (locked) conflicts.push({ file: f, lockedBy: locked.agent, lockedTask: locked.task });
   }
   if (conflicts.length > 0) {
@@ -135,7 +222,7 @@ if (cmd === 'check') {
   out({ agent: opts.agent, lockCount: locks.length, locks });
 
 } else {
-  fail('Unknown command: ' + cmd + '. Use: check, lock, release, status, agent-locks');
+  fail('Unknown command: ' + cmd + '. Use: check, lock, lock-scope, release, status, agent-locks');
 }
 `;
 }
