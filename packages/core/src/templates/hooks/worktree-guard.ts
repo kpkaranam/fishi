@@ -12,10 +12,13 @@ export function getWorktreeGuardHook(): string {
 // worktree-guard.mjs — FISHI Worktree Guard Hook
 // PreToolUse hook for Agent tool. Validates that code-writing agents
 // are dispatched with isolation: "worktree" during development/QA phases.
+// Also auto-registers tasks in sprint-meta.yaml when Agent tool bypasses
+// worktree-manager.mjs (Claude Code creates worktrees natively).
 // Zero dependencies: uses only Node.js built-ins.
 
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { execSync } from 'child_process';
 
 const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
 const stateFile = join(ROOT, '.fishi', 'state', 'project.yaml');
@@ -55,14 +58,95 @@ try {
   process.exit(0); // Can't parse — allow
 }
 
-// Only enforce for worktree-required agents
+// ── Auto-register task in sprint-meta (runs for ALL agent dispatches) ──
+// This runs BEFORE enforcement checks so tasks are tracked even if the
+// guard would otherwise exit early (wrong phase, non-code agent, etc.)
+if (agentType && prompt) {
+  try {
+    const agentName = agentType.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+    // Extract task ID from prompt
+    let taskId = null;
+    const taskPatterns = [
+      /\\[TASK\\]\\s*(?:TASK-)?([a-zA-Z0-9][-a-zA-Z0-9]*)/i,
+      /TASK-(\\d+)/,
+      /--task\\s+(\\S+)/,
+      /^(?:implement|build|create|fix|add|update|refactor)\\s+(\\S+)/im
+    ];
+    for (const pat of taskPatterns) {
+      const m = prompt.match(pat);
+      if (m) {
+        taskId = m[1].toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-|-$/g, '');
+        break;
+      }
+    }
+    if (!taskId) {
+      const words = prompt.replace(/[^a-zA-Z0-9\\s-]/g, '').trim().split(/\\s+/);
+      taskId = (words[0] || 'unknown').toLowerCase().slice(0, 30);
+    }
+
+    // Extract scope from prompt
+    let scope = '';
+    const scopeMatch = prompt.match(/\\[(?:SCOPE|FILES)\\]\\s*([^\\[]+?)(?=\\n\\[|$)/is);
+    if (scopeMatch) {
+      const paths = scopeMatch[1].match(/[\\w./-]+\\.[a-z]{1,5}/g);
+      if (paths) scope = paths.join(',');
+    }
+
+    // Register if not already tracked
+    const metaPath = join(ROOT, '.fishi', 'taskboard', 'sprint-meta.yaml');
+    const metaDir = join(ROOT, '.fishi', 'taskboard');
+    if (!existsSync(metaDir)) mkdirSync(metaDir, { recursive: true });
+
+    let alreadyRegistered = false;
+    if (existsSync(metaPath)) {
+      const meta = readFileSync(metaPath, 'utf-8');
+      if (meta.includes('id: ' + taskId)) alreadyRegistered = true;
+    }
+
+    if (!alreadyRegistered) {
+      const wmScript = join(ROOT, '.fishi', 'scripts', 'worktree-manager.mjs');
+      const tbScript = join(ROOT, '.fishi', 'scripts', 'taskboard-update.mjs');
+      let registered = false;
+
+      if (existsSync(wmScript)) {
+        try {
+          const scopeArg = scope ? \` --scope "\${scope}"\` : '';
+          execSync(\`node "\${wmScript}" auto-register --agent "\${agentName}" --task "\${taskId}" --coordinator "dev-lead"\${scopeArg}\`, {
+            cwd: ROOT, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000
+          });
+          registered = true;
+        } catch {}
+      }
+
+      if (!registered && existsSync(tbScript)) {
+        try {
+          execSync(\`node "\${tbScript}" add-task --id "\${taskId}" --agent "\${agentName}" --worktree "auto-\${agentName}-\${taskId}"\`, {
+            cwd: ROOT, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000
+          });
+          registered = true;
+        } catch {}
+      }
+
+      if (registered) {
+        process.stderr.write(\`[FISHI] Auto-registered task "\${taskId}" for agent "\${agentName}" in sprint-meta.yaml\\n\`);
+      }
+    }
+  } catch {
+    // Auto-registration is best-effort — never block Agent dispatch
+  }
+}
+
+// ── Enforcement checks (only during development/QA phases) ──────────
+
+// Only enforce isolation for worktree-required agents
 if (!WORKTREE_REQUIRED_AGENTS.includes(agentType)) {
   process.exit(0);
 }
 
 // Check current phase
 if (!existsSync(stateFile)) {
-  process.exit(0); // No state — allow (might be outside FISHI project)
+  process.exit(0);
 }
 
 let phase = 'init';
@@ -74,7 +158,6 @@ try {
   process.exit(0);
 }
 
-// Only enforce during development/QA phases
 if (!ENFORCED_PHASES.includes(phase)) {
   process.exit(0);
 }

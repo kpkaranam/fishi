@@ -1123,10 +1123,88 @@ function cmdMergeReady() {
   }
 }
 
+// ── auto-register: register task in sprint-meta WITHOUT creating git worktree ──
+// Used by worktree-guard.mjs and worktree-hooks.mjs when Claude Code's Agent
+// tool creates worktrees natively, bypassing worktree-manager.mjs create.
+
+function cmdAutoRegister() {
+  const agent = flag('agent');
+  const task = flag('task');
+  const coordinator = flag('coordinator') || 'dev-lead';
+  const scope = flag('scope');
+  const dependsOn = flag('depends-on');
+
+  if (!agent || !task) {
+    fail('Usage: worktree-manager.mjs auto-register --agent <name> --task <slug> [--coordinator <name>] [--scope <paths>] [--depends-on <task-ids>]');
+  }
+
+  const agentSlug = slugify(agent);
+  const taskSlug = slugify(task);
+  const coordinatorSlug = slugify(coordinator);
+  const treeName = \`auto-\${agentSlug}-\${taskSlug}\`;
+
+  // Check if already registered
+  const meta = readSprintMeta();
+  if (meta.tasks.find(t => t.id === taskSlug)) {
+    out({ status: 'already-registered', task: taskSlug, agent: agentSlug });
+    return;
+  }
+
+  // Parse dependencies
+  const depList = dependsOn ? dependsOn.split(',').map(d => d.trim()).filter(Boolean) : [];
+
+  // Check for circular dependencies if deps provided
+  if (depList.length > 0) {
+    const cycle = detectCycle(meta.tasks, taskSlug, depList);
+    if (cycle) {
+      fail(\`Circular dependency detected: \${cycle}\`);
+    }
+  }
+
+  // Register task in sprint-meta
+  meta.tasks.push({
+    id: taskSlug,
+    agent: agentSlug,
+    worktree: treeName,
+    scope: scope || '',
+    depends_on: depList,
+    merge_status: 'pending',
+    qa_quick: null,
+    qa_retries: 0,
+  });
+  writeSprintMeta(meta);
+
+  // Register in agent registry
+  const branch = \`agent/\${coordinatorSlug}/\${agentSlug}/\${taskSlug}\`;
+  appendWorktreeEntry(agentSlug, taskSlug, coordinatorSlug, branch, treeName);
+
+  // Acquire file locks if scope provided
+  if (scope) {
+    try {
+      const lockScript = join(ROOT, '.fishi', 'scripts', 'file-lock-hook.mjs');
+      if (existsSync(lockScript)) {
+        run(\`node \${lockScript} lock-scope --agent \${agentSlug} --task \${taskSlug} --scope "\${scope}"\`);
+      }
+    } catch {}
+  }
+
+  // Emit monitor event
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.auto_registered', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug } })).catch(() => {}); } catch {}
+
+  out({
+    status: 'auto-registered',
+    task: taskSlug,
+    agent: agentSlug,
+    coordinator: coordinatorSlug,
+    worktree: treeName,
+  });
+}
+
 // ── Dispatch ─────────────────────────────────────────────────────────
 
 switch (command) {
   case 'create': cmdCreate(); break;
+  case 'auto-register': cmdAutoRegister(); break;
   case 'status': cmdStatus(); break;
   case 'review': cmdReview(); break;
   case 'rebase': cmdRebase(); break;
@@ -1142,6 +1220,7 @@ switch (command) {
       usage: 'worktree-manager.mjs <command> [options]',
       commands: {
         create: '--agent <name> --task <slug> [--coordinator <name>] [--scope <paths>] [--depends-on <task-ids>]',
+        'auto-register': '--agent <name> --task <slug> [--coordinator <name>] [--scope <paths>] [--depends-on <task-ids>] — register without creating git worktree',
         status: '(no args) — list all worktrees with merge status',
         review: '--worktree <name> — diff stats for a worktree',
         rebase: '--worktree <name> — rebase worktree branch onto latest base branch',
