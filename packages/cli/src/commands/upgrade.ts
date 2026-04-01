@@ -54,6 +54,7 @@ import {
   docsAgentTemplate,
   writingAgentTemplate,
   marketingAgentTemplate,
+  qaAgentTemplate,
   getDeepResearchAgentTemplate,
   getSprintCompletionGuardHook,
 } from '@qlucent/fishi-core';
@@ -395,6 +396,7 @@ export async function upgradeCommand(): Promise<void> {
         ['docs-agent.md', docsAgentTemplate(ctx)],
         ['writing-agent.md', writingAgentTemplate(ctx)],
         ['marketing-agent.md', marketingAgentTemplate(ctx)],
+        ['qa-agent.md', qaAgentTemplate(ctx)],
         ['deep-research-agent.md', getDeepResearchAgentTemplate()],
       ];
 

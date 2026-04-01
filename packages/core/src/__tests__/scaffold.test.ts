@@ -37,7 +37,7 @@ describe('generateScaffold', () => {
     expect(result).toHaveProperty('hookCount');
     expect(result).toHaveProperty('filesCreated');
 
-    expect(result.agentCount).toBe(19);
+    expect(result.agentCount).toBe(20);
     expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
     expect(result.hookCount).toBe(23);
@@ -356,7 +356,7 @@ describe('generateScaffold', () => {
         ...defaultOptions,
         projectType: 'brownfield',
       });
-      expect(result.agentCount).toBe(19);
+      expect(result.agentCount).toBe(20);
     });
 
     it('handles hybrid project type', async () => {
@@ -365,7 +365,7 @@ describe('generateScaffold', () => {
         ...defaultOptions,
         projectType: 'hybrid',
       });
-      expect(result.agentCount).toBe(19);
+      expect(result.agentCount).toBe(20);
     });
 
     it('handles economy cost mode', async () => {
@@ -498,7 +498,7 @@ describe('generateScaffold — brownfield with resolutions', () => {
     const dir = createTempDir();
     const result = await generateScaffold(dir, defaultOptions);
 
-    expect(result.agentCount).toBe(19);
+    expect(result.agentCount).toBe(20);
     expect(result.skillCount).toBe(13);
     expect(result.commandCount).toBe(8);
     expect(result.filesCreated).toBeGreaterThan(0);

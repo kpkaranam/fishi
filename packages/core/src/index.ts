@@ -51,6 +51,7 @@ export {
   docsAgentTemplate,
   writingAgentTemplate,
   marketingAgentTemplate,
+  qaAgentTemplate,
 } from './templates/agents/index';
 
 // Domain agent templates

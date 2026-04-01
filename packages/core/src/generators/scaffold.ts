@@ -26,6 +26,7 @@ import { securityAgentTemplate } from '../templates/agents/security-agent.js';
 import { docsAgentTemplate } from '../templates/agents/docs-agent.js';
 import { writingAgentTemplate } from '../templates/agents/writing-agent.js';
 import { marketingAgentTemplate } from '../templates/agents/marketing-agent.js';
+import { qaAgentTemplate } from '../templates/agents/qa-agent.js';
 
 // Factory templates
 import { getAgentFactoryTemplate } from '../templates/factories/agent-template.js';
@@ -211,7 +212,7 @@ export async function generateScaffold(
     await mkdir(join(targetDir, dir), { recursive: true });
   }
 
-  // ── Agents (1 master + 4 coordinators + 13 workers = 18) ──────────
+  // ── Agents (1 master + 4 coordinators + 14 workers = 19) ──────────
   await write('.claude/agents/master-orchestrator.md', getMasterOrchestratorTemplate(), 'agents');
   await write('.claude/agents/coordinators/planning-lead.md', planningLeadTemplate(ctx), 'agents');
   await write('.claude/agents/coordinators/dev-lead.md', devLeadTemplate(ctx), 'agents');
@@ -230,7 +231,8 @@ export async function generateScaffold(
   await write('.claude/agents/docs-agent.md', docsAgentTemplate(ctx), 'agents');
   await write('.claude/agents/writing-agent.md', writingAgentTemplate(ctx), 'agents');
   await write('.claude/agents/marketing-agent.md', marketingAgentTemplate(ctx), 'agents');
-  let agentCount = 18;
+  await write('.claude/agents/qa-agent.md', qaAgentTemplate(ctx), 'agents');
+  let agentCount = 19;
 
   // ── Deep Research Agent (always included) ────────────────────────
   await write('.claude/agents/deep-research-agent.md', getDeepResearchAgentTemplate(), 'agents');
