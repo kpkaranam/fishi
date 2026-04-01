@@ -385,6 +385,29 @@ describe('E2E Pipeline Tests', () => {
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dup-task']);
       runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dup-task', '--force']);
     });
+
+    it('merge syncs board.md — moves task to Done', { timeout: 15000 }, () => {
+      // Setup: create a board.md with a task in In Progress
+      const boardPath = join(projectDir, '.fishi', 'taskboard', 'board.md');
+      writeFileSync(boardPath, `## Backlog\n\n## Ready\n\n## In Progress\n- [ ] board-sync-task: Test board sync [Agent: backend-agent]\n\n## Review\n\n## Done\n`);
+
+      // Create and merge a worktree for this task
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'board-sync-task', '--coordinator', 'dev-lead']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-board-sync-task']);
+
+      // Verify board.md now has the task in Done
+      const board = readFileSync(boardPath, 'utf-8');
+      const doneSection = board.split(/^## Done/m)[1] || '';
+      expect(doneSection).toContain('board-sync-task');
+      expect(doneSection).toContain('[x]');
+
+      // Verify it's removed from In Progress
+      const inProgressSection = board.split(/^## In Progress/m)[1]?.split(/^## /m)[0] || '';
+      expect(inProgressSection).not.toContain('board-sync-task');
+
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-board-sync-task', '--force']);
+    });
   });
 
   // ── GROUP 5: Todo Manager ─────────────────────────────────────────

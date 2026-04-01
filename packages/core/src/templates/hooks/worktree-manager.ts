@@ -199,6 +199,44 @@ function writeSprintMeta(meta) {
   writeFileSync(SPRINT_META_PATH, yaml, 'utf-8');
 }
 
+function syncBoardTask(taskId, targetColumn) {
+  const boardPath = join(ROOT, '.fishi', 'taskboard', 'board.md');
+  if (!existsSync(boardPath)) return;
+
+  let board = readFileSync(boardPath, 'utf-8');
+
+  // Find the task line (matches patterns like "- [ ] TASK-001: ..." or "- [x] auth-api ...")
+  // Task IDs are slugified (a-z0-9-), safe to use directly in regex
+  const pattern = new RegExp('^(\\\\s*-\\\\s*\\\\[[ x]\\\\]\\\\s*.*' + taskId + '.*)', 'gm');
+
+  const match = board.match(pattern);
+  if (!match) return; // Task not found in board
+
+  const taskLine = match[0];
+
+  // Remove the task from its current location
+  board = board.replace(taskLine, '');
+
+  // Mark as checked
+  const checkedLine = taskLine.replace(/\\[ \\]/, '[x]');
+
+  // Find the target column and append the task
+  const columnRegex = new RegExp('^## ' + targetColumn, 'm');
+  const columnMatch = board.match(columnRegex);
+  if (columnMatch) {
+    const insertPos = board.indexOf(columnMatch[0]) + columnMatch[0].length;
+    const rest = board.slice(insertPos);
+    const nextHeading = rest.match(/^## /m);
+    const insertAt = nextHeading ? insertPos + nextHeading.index : board.length;
+    board = board.slice(0, insertAt).trimEnd() + '\\n' + checkedLine.trim() + '\\n\\n' + board.slice(insertAt);
+  }
+
+  // Clean up extra blank lines
+  board = board.replace(/\\n{3,}/g, '\\n\\n');
+
+  writeFileSync(boardPath, board, 'utf-8');
+}
+
 function detectCycle(tasks, newId, newDeps) {
   // Build adjacency: task -> depends_on
   const graph = {};
@@ -649,6 +687,14 @@ function cmdMerge() {
     if (task && meta) {
       task.merge_status = 'merged';
       writeSprintMeta(meta);
+      // Sync board.md — move task to Done column
+      syncBoardTask(task.id, 'Done');
+    } else {
+      // No sprint-meta task — infer task ID from branch for board sync
+      const branchParts = branch.split('/');
+      if (branchParts.length >= 4) {
+        syncBoardTask(branchParts.slice(3).join('/'), 'Done');
+      }
     }
     out({ merged: branch, into: getBaseBranch(), status: 'already-merged' });
     return;
@@ -689,6 +735,8 @@ function cmdMerge() {
       task.merge_status = 'merged';
       task.qa_quick = 'passed';
       writeSprintMeta(meta);
+      // Sync board.md — move task to Done column
+      syncBoardTask(taskId, 'Done');
       try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'qa.quick_passed', agent: 'system', data: { task_id: taskId } })).catch(() => {}); } catch {}
       // Release file locks
       try {
@@ -715,7 +763,19 @@ function cmdMerge() {
       }
     }
   } else if (hasSprintMeta && meta && !task) {
-    // Task not tracked in sprint-meta — just update nothing (backward compat)
+    // Task not tracked in sprint-meta — still sync board.md if possible
+    const branchParts = branch.split('/');
+    if (branchParts.length >= 4) {
+      const inferredTaskId = branchParts.slice(3).join('/');
+      syncBoardTask(inferredTaskId, 'Done');
+    }
+  } else {
+    // No sprint-meta at all — still sync board.md if possible
+    const branchParts = branch.split('/');
+    if (branchParts.length >= 4) {
+      const inferredTaskId = branchParts.slice(3).join('/');
+      syncBoardTask(inferredTaskId, 'Done');
+    }
   }
 
   // NOTE: Worktree is NOT removed after merge. It stays alive until sprint-cleanup.
