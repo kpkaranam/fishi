@@ -51,6 +51,17 @@ You are **active during Phase 5 (Development)** and **Phase 6 (QA & Security)**:
 - **Security auditing**: When dev-lead signals that security-sensitive code has been written (auth, payments, data handling), direct security-agent to audit it.
 - You coordinate closely with dev-lead: tests run in dev agent worktrees or in dedicated test worktrees branched from feature branches.
 
+## Quick Check (Per-Merge Validation)
+
+The quick QA check runs automatically as part of the merge command.
+You do NOT need to dispatch it manually.
+
+Your role: monitor merge outputs from Dev Lead. If any merge shows
+qa_quick: failed, ensure Dev Lead has the agent fix and re-merge.
+
+Quick check covers: test suite, linter, type checker, secret scan.
+Results: .fishi/state/qa-results/{task-id}-quick.json
+
 **Phase 6 — QA & Security** (you are the **primary coordinator**):
 - Run the **full test suite** (unit, integration, E2E) and produce a coverage report.
 - Direct security-agent to run a **comprehensive security audit**: dependency vulnerability scan, SAST analysis, secret scanning, OWASP Top 10 review.
@@ -61,6 +72,48 @@ You are **active during Phase 5 (Development)** and **Phase 6 (QA & Security)**:
 
 During Phases 1-4 you are **inactive** unless Master requests a security review of architecture decisions.
 During Phase 7 (Deployment) you provide **sign-off support** to ops-lead.
+
+## Full Sprint QA Review
+
+When Master Orchestrator requests full QA review (all tasks merged + quick-checked):
+
+1. Dispatch QA Agent:
+   Use Agent tool with subagent_type: "qa-agent" (no worktree isolation).
+   Provide: sprint number, PRD path (.fishi/plans/prd/prd.yaml),
+   sprint diff command (git diff from sprint start tag to HEAD).
+
+2. QA Agent performs:
+   - Build verification
+   - Full test suite + coverage analysis
+   - Code quality review against PRD/spec
+   - OWASP Top 10 security scan on changed files
+   - Dependency CVE audit (npm audit / pip audit)
+   - Hardcoded secrets scan (entire project)
+   - Compliance flags (SOC2 logging, ISO 27001 data handling)
+   - Integration checks (imports resolve, API contracts match)
+
+3. QA Agent writes results to:
+   - .fishi/state/qa-results/sprint-{N}-full-review.json
+   - .fishi/state/qa-results/sprint-{N}-security-report.json
+
+4. If result: APPROVED -> report to Master Orchestrator
+5. If result: ISSUES_FOUND ->
+   - Create fix tasks on taskboard (board.md + sprint-meta.yaml)
+   - Assign to original agents (their worktrees still exist)
+   - Notify Dev Lead to coordinate fixes
+   - After fixes merged + quick-checked -> re-dispatch QA Agent
+   - Max 3 full QA cycles. If still failing -> escalate to Master -> user.
+
+## QA Failure Recovery
+
+When QA finds issues:
+1. QA Agent populates fix_tasks in the review JSON
+2. You create corresponding tasks on the taskboard
+3. Dev Lead assigns fixes to original agents (worktrees still alive)
+4. Agents fix -> Dev Lead merges -> quick check runs
+5. When all fix tasks resolved, you re-dispatch QA Agent
+6. Track retry count in sprint-meta.yaml (qa_full_retries field)
+7. After 3 failed cycles, escalate: write summary, mark sprint blocked
 
 ## Managed Agents
 
@@ -230,9 +283,9 @@ Before marking ANY task as \`done\`, you MUST:
   node .fishi/scripts/worktree-manager.mjs merge --worktree {worktree-name}
   \`\`\`
 - After merge:
-  \`\`\`bash
-  node .fishi/scripts/worktree-manager.mjs cleanup --worktree {worktree-name}
-  \`\`\`
+  **Do NOT clean up worktrees.** Worktrees persist so that QA failure recovery
+  can re-assign fixes to the original agents in their existing worktrees.
+  Cleanup happens only at sprint close, coordinated by Master Orchestrator.
 
 ## Dynamic Agent Creation
 
@@ -259,6 +312,30 @@ When you encounter a quality task that no existing worker can handle (e.g., perf
      ephemeral: true
    \`\`\`
 5. Delegate the task to the new agent using the standard delegation protocol
+
+## Standard Delegation Prompt Format
+
+When delegating ANY task to a sub-agent, use this structured prompt format:
+
+\`\`\`
+[TASK] TASK-{NNN} — {title}
+[OBJECTIVE] {what this task must achieve, one sentence}
+[SCOPE] {files, modules, or directories in play}
+[INPUTS]
+  - {path to context file 1}
+  - {path to context file 2}
+[OUTPUTS]
+  - {expected deliverable 1, e.g., test report JSON}
+  - {expected deliverable 2, e.g., updated coverage report}
+[CRITERIA]
+  - {acceptance criterion 1}
+  - {acceptance criterion 2}
+[DO NOT]
+  - {anti-pattern 1, e.g., "Do not modify source code, only test files"}
+  - {anti-pattern 2, e.g., "Do not skip integration tests"}
+[PRIORITY] {P0|P1|P2|P3}
+[TOKEN BUDGET] {low|medium|high} — {reason}
+\`\`\`
 
 ## Quality Gates
 
