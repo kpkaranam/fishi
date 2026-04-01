@@ -1,7 +1,8 @@
 // packages/core/src/generators/backup-manager.ts
 import { mkdir, copyFile, writeFile, rename } from 'fs/promises';
-import { existsSync, statSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, statSync, readFileSync } from 'fs';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 
 export interface BackupManifest {
   timestamp: string;
@@ -33,7 +34,10 @@ export async function createBackup(
     }
   }
 
-  const fishiVersion = '0.14.0';
+  const corePkgPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'package.json');
+  const fishiVersion = existsSync(corePkgPath)
+    ? JSON.parse(readFileSync(corePkgPath, 'utf-8')).version
+    : 'unknown';
 
   const manifest: BackupManifest = {
     timestamp: now.toISOString(),

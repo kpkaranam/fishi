@@ -2,6 +2,9 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { initCommand } from './commands/init.js';
 import { statusCommand } from './commands/status.js';
 import { mcpCommand } from './commands/mcp.js';
@@ -18,6 +21,9 @@ import { patternsCommand } from './commands/patterns.js';
 import { upgradeCommand } from './commands/upgrade.js';
 import { dockerCommand } from './commands/docker.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'));
+
 const program = new Command();
 
 program
@@ -27,7 +33,7 @@ program
       ' — AI-Powered Software Delivery Pipeline\n' +
       '   Autonomous AI development with human governance'
   )
-  .version('0.18.1');
+  .version(pkg.version);
 
 program
   .command('init')

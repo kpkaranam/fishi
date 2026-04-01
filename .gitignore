@@ -10,3 +10,4 @@ coverage/
 Thumbs.db
 .claude/settings.local.json
 internal-docs/
+docs/

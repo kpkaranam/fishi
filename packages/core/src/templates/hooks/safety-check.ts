@@ -104,6 +104,14 @@ const DANGEROUS_PATTERNS = [
   // ── Environment/secrets exposure ───────────────────────────────────
   { pattern: /\\benv\\s*>\\s*/,                     reason: 'Dumping environment variables to file' },
   { pattern: /printenv\\s*>\\s*/,                   reason: 'Dumping environment variables to file' },
+
+  // ── FISHI worktree safety ─────────────────────────────────────────
+  { pattern: /git\\s+checkout\\s+agent\\//,          reason: 'Checking out agent branch in main repo causes commit loss. Use worktrees instead.' },
+  { pattern: /git\\s+stash\\s*$/,                   reason: 'git stash conflicts with FISHI hooks and causes file loss. Commit your changes instead.' },
+  { pattern: /git\\s+stash\\s+push/,                reason: 'git stash push conflicts with FISHI hooks. Commit your changes instead.' },
+  { pattern: /git\\s+stash\\s+pop/,                 reason: 'git stash pop conflicts with FISHI hooks. Use git stash show to inspect, then apply manually.' },
+  { pattern: /git\\s+stash\\s+apply/,               reason: 'git stash apply conflicts with FISHI hooks. Use git stash show to inspect.' },
+  { pattern: /git\\s+stash\\s+drop/,                reason: 'git stash drop risks losing saved state.' },
 ];
 
 for (const { pattern, reason } of DANGEROUS_PATTERNS) {
