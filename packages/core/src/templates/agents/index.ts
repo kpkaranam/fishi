@@ -18,3 +18,4 @@ export { securityAgentTemplate } from './security-agent';
 export { docsAgentTemplate } from './docs-agent';
 export { writingAgentTemplate } from './writing-agent';
 export { marketingAgentTemplate } from './marketing-agent';
+export { qaAgentTemplate } from './qa-agent';
