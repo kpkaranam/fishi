@@ -4,7 +4,7 @@
  * Manages git worktree lifecycle for agent tasks.
  * Worktrees stay alive until sprint-cleanup — merge does NOT remove them.
  *
- * Commands: create, status, review, merge, cleanup, sprint-cleanup, verify
+ * Commands: create, status, review, merge, merge-ready, cleanup, sprint-cleanup, verify
  */
 export function getWorktreeManagerScript(): string {
   return `#!/usr/bin/env node
@@ -685,6 +685,41 @@ function cmdVerify() {
   });
 }
 
+function cmdMergeReady() {
+  const worktreeName = flag('worktree');
+  if (!worktreeName) fail('Usage: worktree-manager.mjs merge-ready --worktree <name>');
+
+  const meta = readSprintMeta();
+  const task = meta.tasks.find(t => t.worktree === worktreeName || t.id === worktreeName);
+
+  // If no sprint-meta or task not found → backward compat: always ready
+  if (!task) {
+    out({ ready: true });
+    return;
+  }
+
+  // If no dependencies → ready
+  if (!task.depends_on || task.depends_on.length === 0) {
+    out({ ready: true });
+    return;
+  }
+
+  // Check each dependency's merge_status
+  const blockedBy = [];
+  for (const depId of task.depends_on) {
+    const dep = meta.tasks.find(t => t.id === depId);
+    if (!dep || dep.merge_status !== 'merged') {
+      blockedBy.push(depId);
+    }
+  }
+
+  if (blockedBy.length === 0) {
+    out({ ready: true });
+  } else {
+    out({ ready: false, blocked_by: blockedBy });
+  }
+}
+
 // ── Dispatch ─────────────────────────────────────────────────────────
 
 switch (command) {
@@ -695,6 +730,7 @@ switch (command) {
   case 'merge': cmdMerge(); break;
   case 'cleanup': cmdCleanup(); break;
   case 'sprint-cleanup': cmdSprintCleanup(); break;
+  case 'merge-ready': cmdMergeReady(); break;
   case 'verify': cmdVerify(); break;
   default:
     out({
@@ -708,6 +744,7 @@ switch (command) {
         merge: '--worktree <name> — rebase + merge to base branch (keeps worktree alive)',
         cleanup: '--worktree <name> — remove worktree (refuses if unmerged unless --force)',
         'sprint-cleanup': '--sprint <N> — batch cleanup all merged worktrees after sprint completion',
+        'merge-ready': '--worktree <name> — check if all dependency tasks are merged before allowing merge',
         verify: '(no args) — confirm zero active worktrees and stale branches',
       },
     });

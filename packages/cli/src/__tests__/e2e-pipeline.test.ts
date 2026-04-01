@@ -315,6 +315,32 @@ describe('E2E Pipeline Tests', () => {
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-models']);
       runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-models']);
     });
+
+    it('merge-ready returns true for task with no deps', { timeout: 15000 }, () => {
+      // Create a worktree without --depends-on
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'no-deps-task', '--scope', 'src/nodeps']);
+      const result = runJSON('worktree-manager.mjs', ['merge-ready', '--worktree', 'agent-backend-agent-no-deps-task']);
+      expect(result.ready).toBe(true);
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-no-deps-task']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-no-deps-task']);
+    });
+
+    it('merge-ready returns false for task with unmet deps', { timeout: 30000 }, () => {
+      // Create a base task
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'dep-base', '--scope', 'src/depbase']);
+      // Create a dependent task
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'dep-child', '--depends-on', 'dep-base', '--scope', 'src/depchild']);
+      // dep-base has merge_status: pending (not merged) → dep-child should not be ready
+      const result = runJSON('worktree-manager.mjs', ['merge-ready', '--worktree', 'agent-backend-agent-dep-child']);
+      expect(result.ready).toBe(false);
+      expect(result.blocked_by).toContain('dep-base');
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dep-child']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-child']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dep-base']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-base']);
+    });
   });
 
   // ── GROUP 5: Todo Manager ─────────────────────────────────────────
