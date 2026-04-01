@@ -244,15 +244,22 @@ describe('E2E Pipeline Tests', () => {
       expect(result.branch).toContain('backend-agent');
     });
 
-    it('status shows active worktree', () => {
+    it('status shows worktree with merge status', () => {
       const result = runJSON('worktree-manager.mjs', ['status']);
       const worktrees = Array.isArray(result) ? result : [];
       const agentWorktree = worktrees.find((w: any) => w.agent === 'backend-agent');
       expect(agentWorktree).toBeDefined();
-      expect(agentWorktree.status).toBe('active');
+      expect(agentWorktree.agent).toBe('backend-agent');
+      // Branch at same commit as master = already merged
+      expect(['active', 'merged']).toContain(agentWorktree.status);
     });
 
-    it('cleanup removes worktree', () => {
+    it('merge worktree to base branch', () => {
+      const result = runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-auth']);
+      expect(['success', 'already-merged']).toContain(result.status);
+    });
+
+    it('cleanup removes worktree after merge', () => {
       const result = runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-auth']);
       expect(result.status).toBe('cleaned');
     });
@@ -262,6 +269,51 @@ describe('E2E Pipeline Tests', () => {
       const worktrees = Array.isArray(result) ? result : [];
       const agentWorktree = worktrees.find((w: any) => w.agent === 'backend-agent');
       expect(agentWorktree).toBeUndefined();
+    });
+
+    it('create with --scope acquires file locks', { timeout: 15000 }, () => {
+      const result = runJSON('worktree-manager.mjs', ['create', '--agent', 'frontend-agent', '--task', 'ui-auth', '--scope', 'src/auth,src/components']);
+      expect(result.status).toBe('created');
+      expect(result.agent).toBe('frontend-agent');
+      expect(result.task).toBe('ui-auth');
+      expect(result.scope).toBe('src/auth,src/components');
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-frontend-agent-ui-auth']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-frontend-agent-ui-auth']);
+    });
+
+    it('create without --scope works (backward compat)', { timeout: 15000 }, () => {
+      const result = runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'api-v2']);
+      expect(result.status).toBe('created');
+      expect(result.agent).toBe('backend-agent');
+      expect(result.task).toBe('api-v2');
+      expect(result.scope).toBeUndefined();
+      expect(result.depends_on).toBeUndefined();
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-api-v2']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-v2']);
+    });
+
+    it('create with --depends-on stores dependency', { timeout: 30000 }, () => {
+      // First create a task that will be depended on
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'models', '--scope', 'src/models']);
+      // Create a second task that depends on the first
+      const result = runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'api-routes', '--depends-on', 'models', '--scope', 'src/routes']);
+      expect(result.status).toBe('created');
+      expect(result.depends_on).toEqual(['models']);
+
+      // Verify sprint-meta.yaml was written
+      const metaPath = join(projectDir, '.fishi', 'taskboard', 'sprint-meta.yaml');
+      expect(existsSync(metaPath)).toBe(true);
+      const metaContent = readFileSync(metaPath, 'utf-8');
+      expect(metaContent).toContain('id: api-routes');
+      expect(metaContent).toContain('depends_on: [models]');
+
+      // Cleanup both worktrees
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-api-routes']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-routes']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-models']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-models']);
     });
   });
 

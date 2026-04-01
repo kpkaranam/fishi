@@ -1,16 +1,16 @@
 /**
  * Worktree Manager Script Template
  *
- * Generates an .mjs CLI utility that manages git worktree lifecycle for
- * agent tasks. Zero dependencies — Node.js built-ins only.
+ * Manages git worktree lifecycle for agent tasks.
+ * Worktrees stay alive until sprint-cleanup — merge does NOT remove them.
  *
- * Commands: create, status, review, merge, cleanup
+ * Commands: create, status, review, merge, cleanup, sprint-cleanup, verify
  */
 export function getWorktreeManagerScript(): string {
   return `#!/usr/bin/env node
 // worktree-manager.mjs — FISHI worktree lifecycle manager
-// Uses Node.js built-ins only (fs, path, child_process)
-import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+// Worktrees persist until sprint-cleanup. Merge keeps worktrees alive.
+import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
 import { execSync } from 'child_process';
 
@@ -19,7 +19,7 @@ import { execSync } from 'child_process';
 const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
 
 function run(cmd, opts = {}) {
-  return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', ...opts }).trim();
+  return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts }).trim();
 }
 
 function out(obj) {
@@ -38,6 +38,38 @@ function slugify(str) {
     .replace(/^-|-$/g, '');
 }
 
+function getBaseBranch() {
+  try { run('git rev-parse --verify dev'); return 'dev'; } catch {}
+  try { run('git rev-parse --verify main'); return 'main'; } catch {}
+  return 'master';
+}
+
+function ensureOnBaseBranch() {
+  const baseBranch = getBaseBranch();
+  const current = run('git rev-parse --abbrev-ref HEAD');
+  if (current.startsWith('agent/')) {
+    try {
+      run(\`git checkout \${baseBranch}\`);
+      process.stderr.write(\`[FISHI] Main repo was on agent branch \${current} — switched to \${baseBranch}\\n\`);
+    } catch {
+      fail(\`Main repo is on agent branch \${current} and cannot switch to \${baseBranch}. Fix manually: git checkout \${baseBranch}\`);
+    }
+  }
+  return baseBranch;
+}
+
+function isBranchMerged(branch) {
+  try {
+    const baseBranch = getBaseBranch();
+    const merged = execSync(\`git branch --merged \${baseBranch}\`, { cwd: ROOT, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    // git branch output uses prefixes: * = current, + = worktree checkout — strip them
+    return merged.split('\\n').map(b => b.replace(/^[*+]\\s*/, '').trim()).includes(branch);
+  } catch {
+    // git branch --merged can fail on repos with minimal history — treat as merged to avoid blocking cleanup
+    return true;
+  }
+}
+
 // ── Arg parsing ──────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
@@ -52,6 +84,7 @@ function flag(name) {
 // ── YAML helpers (minimal, no deps) ──────────────────────────────────
 
 const REGISTRY_PATH = join(ROOT, '.fishi', 'state', 'agent-registry.yaml');
+const SPRINT_META_PATH = join(ROOT, '.fishi', 'taskboard', 'sprint-meta.yaml');
 
 function readRegistry() {
   if (!existsSync(REGISTRY_PATH)) return '';
@@ -66,12 +99,9 @@ function writeRegistry(content) {
 
 function appendWorktreeEntry(agent, task, coordinator, branch, worktreePath) {
   let content = readRegistry();
-
-  // Ensure worktrees section exists
   if (!content.includes('worktrees:')) {
     content += '\\nworktrees:\\n';
   }
-
   const entry = [
     \`  - agent: \${agent}\`,
     \`    task: \${task}\`,
@@ -81,42 +111,128 @@ function appendWorktreeEntry(agent, task, coordinator, branch, worktreePath) {
     \`    status: active\`,
     \`    created: \${new Date().toISOString()}\`,
   ].join('\\n');
-
   content += entry + '\\n';
   writeRegistry(content);
 }
 
 function removeWorktreeEntry(worktreeName) {
   let content = readRegistry();
-  // Remove the block that contains the matching worktree line
-  // Split into lines, find the entry block, remove it
   const lines = content.split('\\n');
   const result = [];
-  let skip = false;
-  let skipIndent = false;
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Detect start of a worktree entry (line starting with "  - agent:")
     if (line.match(/^\\s+-\\s+agent:/)) {
-      // Look ahead to see if this block contains our worktree
       let blockEnd = i + 1;
       let blockLines = [line];
       while (blockEnd < lines.length && lines[blockEnd].match(/^\\s+\\w/) && !lines[blockEnd].match(/^\\s+-\\s+agent:/)) {
         blockLines.push(lines[blockEnd]);
         blockEnd++;
       }
-      const blockText = blockLines.join('\\n');
-      if (blockText.includes(worktreeName)) {
-        // Skip this block
+      if (blockLines.join('\\n').includes(worktreeName)) {
         i = blockEnd - 1;
         continue;
       }
     }
     result.push(line);
   }
-
   writeRegistry(result.join('\\n'));
+}
+
+// ── Sprint-meta helpers (minimal YAML for tasks array) ──────────────
+
+function readSprintMeta() {
+  if (!existsSync(SPRINT_META_PATH)) return { sprint: 1, qa_full_retries: 0, tasks: [] };
+  const raw = readFileSync(SPRINT_META_PATH, 'utf-8');
+  const sprintMatch = raw.match(/^sprint:\\s*(\\d+)/m);
+  const qaMatch = raw.match(/^qa_full_retries:\\s*(\\d+)/m);
+  const sprint = sprintMatch ? parseInt(sprintMatch[1], 10) : 1;
+  const qaRetries = qaMatch ? parseInt(qaMatch[1], 10) : 0;
+
+  const tasks = [];
+  // Split into task blocks: each starts with "  - id:"
+  const taskBlocks = raw.split(/^\\s+-\\s+id:\\s*/m).slice(1);
+  for (const block of taskBlocks) {
+    const lines = block.split('\\n');
+    const id = lines[0].trim();
+    const get = (key) => {
+      const line = lines.find(l => l.match(new RegExp('^\\\\s+' + key + ':\\\\s')));
+      if (!line) return null;
+      return line.split(':').slice(1).join(':').trim();
+    };
+    const depsLine = lines.find(l => l.match(/^\\s+depends_on:/));
+    let depends_on = [];
+    if (depsLine) {
+      const bracketMatch = depsLine.match(/\\[([^\\]]*)\\]/);
+      if (bracketMatch && bracketMatch[1].trim()) {
+        depends_on = bracketMatch[1].split(',').map(d => d.trim());
+      }
+    }
+    tasks.push({
+      id,
+      agent: get('agent') || '',
+      worktree: get('worktree') || '',
+      scope: get('scope') ? get('scope').replace(/^"|"$/g, '') : '',
+      depends_on,
+      merge_status: get('merge_status') || 'pending',
+      qa_quick: get('qa_quick') === 'null' ? null : get('qa_quick'),
+      qa_retries: parseInt(get('qa_retries') || '0', 10),
+    });
+  }
+  return { sprint, qa_full_retries: qaRetries, tasks };
+}
+
+function writeSprintMeta(meta) {
+  const dir = join(ROOT, '.fishi', 'taskboard');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  let yaml = \`sprint: \${meta.sprint}\\nqa_full_retries: \${meta.qa_full_retries}\\ntasks:\\n\`;
+  for (const t of meta.tasks) {
+    const deps = t.depends_on && t.depends_on.length > 0 ? \`[\${t.depends_on.join(', ')}]\` : '[]';
+    yaml += \`  - id: \${t.id}\\n\`;
+    yaml += \`    agent: \${t.agent}\\n\`;
+    yaml += \`    worktree: \${t.worktree}\\n\`;
+    yaml += \`    scope: "\${t.scope || ''}"\\n\`;
+    yaml += \`    depends_on: \${deps}\\n\`;
+    yaml += \`    merge_status: \${t.merge_status || 'pending'}\\n\`;
+    yaml += \`    qa_quick: \${t.qa_quick === null ? 'null' : t.qa_quick}\\n\`;
+    yaml += \`    qa_retries: \${t.qa_retries || 0}\\n\`;
+  }
+  writeFileSync(SPRINT_META_PATH, yaml, 'utf-8');
+}
+
+function detectCycle(tasks, newId, newDeps) {
+  // Build adjacency: task -> depends_on
+  const graph = {};
+  for (const t of tasks) {
+    graph[t.id] = t.depends_on || [];
+  }
+  graph[newId] = newDeps;
+
+  // DFS cycle detection
+  const visited = new Set();
+  const inStack = new Set();
+
+  function dfs(node, path) {
+    if (inStack.has(node)) {
+      const cycleStart = path.indexOf(node);
+      return [...path.slice(cycleStart), node];
+    }
+    if (visited.has(node)) return null;
+    visited.add(node);
+    inStack.add(node);
+    path.push(node);
+    for (const dep of (graph[node] || [])) {
+      const cycle = dfs(dep, path);
+      if (cycle) return cycle;
+    }
+    path.pop();
+    inStack.delete(node);
+    return null;
+  }
+
+  // Check starting from the new task
+  const cycle = dfs(newId, []);
+  if (cycle) return cycle.join(' \\u2192 ');
+  return null;
 }
 
 // ── Commands ─────────────────────────────────────────────────────────
@@ -125,9 +241,11 @@ function cmdCreate() {
   const agent = flag('agent');
   const task = flag('task');
   const coordinator = flag('coordinator') || 'dev-lead';
+  const scope = flag('scope');
+  const dependsOn = flag('depends-on');
 
   if (!agent || !task) {
-    fail('Usage: worktree-manager.mjs create --agent <name> --task <slug> [--coordinator <name>]');
+    fail('Usage: worktree-manager.mjs create --agent <name> --task <slug> [--coordinator <name>] [--scope <paths>] [--depends-on <task-ids>]');
   }
 
   const agentSlug = slugify(agent);
@@ -142,37 +260,11 @@ function cmdCreate() {
     fail(\`Worktree already exists: \${treePath}\`);
   }
 
-  // Ensure .trees directory exists
   const treesDir = join(ROOT, '.trees');
-  if (!existsSync(treesDir)) {
-    mkdirSync(treesDir, { recursive: true });
-  }
+  if (!existsSync(treesDir)) mkdirSync(treesDir, { recursive: true });
 
-  // Determine base branch — prefer dev, fall back to main/master
-  let baseBranch = 'dev';
-  try {
-    run('git rev-parse --verify dev');
-  } catch {
-    try {
-      run('git rev-parse --verify main');
-      baseBranch = 'main';
-    } catch {
-      baseBranch = 'master';
-    }
-  }
+  const baseBranch = ensureOnBaseBranch();
 
-  // Safety: ensure main repo is on the base branch (not an agent branch)
-  const currentMainBranch = run('git rev-parse --abbrev-ref HEAD');
-  if (currentMainBranch.startsWith('agent/')) {
-    try {
-      run(\`git checkout \${baseBranch}\`);
-      process.stderr.write(\`[FISHI] Main repo was on agent branch \${currentMainBranch} — switched to \${baseBranch}\\n\`);
-    } catch {
-      fail(\`Main repo is on agent branch \${currentMainBranch} and cannot switch to \${baseBranch}. Fix manually: git checkout \${baseBranch}\`);
-    }
-  }
-
-  // Create the worktree with a new branch
   try {
     run(\`git worktree add -b \${branch} \${treePath} \${baseBranch}\`);
   } catch (err) {
@@ -184,28 +276,100 @@ function cmdCreate() {
     const src = join(ROOT, envFile);
     const dest = join(absTreePath, envFile);
     if (existsSync(src)) {
-      try {
-        copyFileSync(src, dest);
-      } catch {
-        // Non-fatal
-      }
+      try { copyFileSync(src, dest); } catch {}
     }
   }
 
-  // Update agent registry
   appendWorktreeEntry(agentSlug, taskSlug, coordinatorSlug, branch, treePath);
 
-  // Emit monitoring event
-  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => { try { import(new URL('file:///' + ROOT.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href).then(m2 => m2.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => {}); } catch {} }); } catch {}
+  // ── Scope: acquire file locks via file-lock-hook ──
+  if (scope) {
+    try {
+      const lockScript = join(ROOT, '.fishi', 'scripts', 'file-lock-hook.mjs');
+      const lockResult = run(\`node \${lockScript} lock-scope --agent \${agentSlug} --task \${taskSlug} --scope "\${scope}"\`);
+      let lockJson;
+      try { lockJson = JSON.parse(lockResult); } catch { lockJson = {}; }
+      if (lockJson.status === 'conflict') {
+        // Rollback: remove worktree since scope conflict
+        try { run(\`git worktree remove \${treePath} --force\`); } catch {}
+        try { run(\`git branch -d \${branch}\`); } catch {}
+        removeWorktreeEntry(treeName);
+        fail(\`Scope conflict: \${lockJson.message || lockJson.conflicts ? JSON.stringify(lockJson.conflicts) : 'file lock conflict detected'}\`);
+      }
+    } catch (err) {
+      // Rollback worktree on lock failure
+      try { run(\`git worktree remove \${treePath} --force\`); } catch {}
+      try { run(\`git branch -d \${branch}\`); } catch {}
+      removeWorktreeEntry(treeName);
+      // Check if the error output contains conflict JSON
+      const errOut = err.stdout || err.message || '';
+      let errJson;
+      try { errJson = JSON.parse(errOut.slice(errOut.indexOf('{'))); } catch {}
+      if (errJson && errJson.status === 'conflict') {
+        fail(\`Scope conflict: \${errJson.message || JSON.stringify(errJson.conflicts || errJson)}\`);
+      }
+      fail(\`Failed to acquire scope lock: \${errOut}\`);
+    }
+  }
 
-  out({
+  // ── Depends-on: validate and store dependencies ──
+  if (dependsOn) {
+    const depList = dependsOn.split(',').map(d => d.trim()).filter(Boolean);
+    const meta = readSprintMeta();
+
+    // Check for circular dependencies
+    const cycle = detectCycle(meta.tasks, taskSlug, depList);
+    if (cycle) {
+      // Rollback worktree
+      try { run(\`git worktree remove \${treePath} --force\`); } catch {}
+      try { run(\`git branch -d \${branch}\`); } catch {}
+      removeWorktreeEntry(treeName);
+      fail(\`Circular dependency detected: \${cycle}\`);
+    }
+
+    // Add task to sprint-meta
+    meta.tasks.push({
+      id: taskSlug,
+      agent: agentSlug,
+      worktree: treeName,
+      scope: scope || '',
+      depends_on: depList,
+      merge_status: 'pending',
+      qa_quick: null,
+      qa_retries: 0,
+    });
+    writeSprintMeta(meta);
+  } else if (scope) {
+    // Even without depends-on, record the task in sprint-meta if scope was provided
+    const meta = readSprintMeta();
+    if (!meta.tasks.find(t => t.id === taskSlug)) {
+      meta.tasks.push({
+        id: taskSlug,
+        agent: agentSlug,
+        worktree: treeName,
+        scope: scope || '',
+        depends_on: [],
+        merge_status: 'pending',
+        qa_quick: null,
+        qa_retries: 0,
+      });
+      writeSprintMeta(meta);
+    }
+  }
+
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.created', agent: agentSlug, data: { task: taskSlug, coordinator: coordinatorSlug, branch } })).catch(() => {}); } catch {}
+
+  const result = {
     worktree: treePath,
     branch,
     agent: agentSlug,
     task: taskSlug,
     coordinator: coordinatorSlug,
     status: 'created',
-  });
+  };
+  if (scope) result.scope = scope;
+  if (dependsOn) result.depends_on = dependsOn.split(',').map(d => d.trim()).filter(Boolean);
+  out(result);
 }
 
 function cmdStatus() {
@@ -216,10 +380,7 @@ function cmdStatus() {
     rawList = run('git worktree list');
   }
 
-  const registryContent = readRegistry();
   const worktrees = [];
-
-  // Parse porcelain output
   const blocks = rawList.split('\\n\\n').filter(Boolean);
   for (const block of blocks) {
     const lines = block.split('\\n');
@@ -230,16 +391,15 @@ function cmdStatus() {
       if (line === 'bare') entry.bare = true;
       if (line.startsWith('HEAD ')) entry.head = line.slice(5);
     }
-
     if (entry.bare) continue;
 
-    // Match with registry for agent/task info
     const branchParts = (entry.branch || '').split('/');
     if (branchParts[0] === 'agent' && branchParts.length >= 4) {
       entry.coordinator = branchParts[1];
       entry.agent = branchParts[2];
       entry.task = branchParts.slice(3).join('/');
-      entry.status = 'active';
+      entry.merged = isBranchMerged(entry.branch);
+      entry.status = entry.merged ? 'merged' : 'active';
     }
 
     worktrees.push(entry);
@@ -250,52 +410,15 @@ function cmdStatus() {
 
 function cmdReview() {
   const worktreeName = flag('worktree');
-  if (!worktreeName) {
-    fail('Usage: worktree-manager.mjs review --worktree <name>');
-  }
+  if (!worktreeName) fail('Usage: worktree-manager.mjs review --worktree <name>');
 
-  // Find the branch for this worktree
   const treePath = join('.trees', worktreeName);
   let branch;
-  try {
-    branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`);
-  } catch {
-    fail(\`Could not determine branch for worktree: \${treePath}\`);
-  }
+  try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
+  catch { fail(\`Could not determine branch for worktree: \${treePath}\`); }
 
-  // Determine base branch
-  let baseBranch = 'dev';
-  try {
-    run('git rev-parse --verify dev');
-  } catch {
-    try {
-      run('git rev-parse --verify main');
-      baseBranch = 'main';
-    } catch {
-      baseBranch = 'master';
-    }
-  }
-
-  // Get diff stats
-  let diffStat;
-  try {
-    diffStat = run(\`git diff --stat \${baseBranch}...\${branch}\`);
-  } catch {
-    diffStat = '';
-  }
-
-  // Get full diff for analysis
-  let fullDiff;
-  try {
-    fullDiff = run(\`git diff \${baseBranch}...\${branch}\`);
-  } catch {
-    fullDiff = '';
-  }
-
-  // Count files changed
-  let filesChanged = 0;
-  let linesAdded = 0;
-  let linesRemoved = 0;
+  const baseBranch = getBaseBranch();
+  let filesChanged = 0, linesAdded = 0, linesRemoved = 0;
 
   try {
     const numstat = run(\`git diff --numstat \${baseBranch}...\${branch}\`);
@@ -305,192 +428,287 @@ function cmdReview() {
       if (added !== '-') linesAdded += parseInt(added, 10) || 0;
       if (removed !== '-') linesRemoved += parseInt(removed, 10) || 0;
     }
-  } catch {
-    // Ignore
-  }
+  } catch {}
 
-  // Check for test files in diff
-  const hasTests = /\\.(test|spec)\\.(ts|js|tsx|jsx|mjs)|__tests__|\\/test\\//.test(fullDiff);
-
-  // Build summary from stat output
-  const diffSummary = diffStat
-    .split('\\n')
-    .slice(-1)[0] || \`\${filesChanged} files changed\`;
+  let fullDiff = '';
+  try { fullDiff = run(\`git diff \${baseBranch}...\${branch}\`); } catch {}
+  const hasTests = /\\.(test|spec)\\.(ts|js|tsx|jsx|mjs|go)|_test\\.go|__tests__|\\/test\\//.test(fullDiff);
 
   out({
     branch,
     base: baseBranch,
+    merged: isBranchMerged(branch),
     files_changed: filesChanged,
     lines_added: linesAdded,
     lines_removed: linesRemoved,
     has_tests: hasTests,
-    diff_summary: diffSummary.trim(),
+  });
+}
+
+function cmdRebase() {
+  const worktreeName = flag('worktree');
+  if (!worktreeName) fail('Usage: worktree-manager.mjs rebase --worktree <name>');
+
+  const treePath = join('.trees', worktreeName);
+  let branch;
+  try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
+  catch { fail(\`Could not determine branch for worktree: \${treePath}\`); }
+
+  const baseBranch = getBaseBranch();
+
+  // Fetch latest from origin (timeout: 10s, non-fatal)
+  try { run('git remote get-url origin'); run('git fetch origin'); } catch {}
+
+  // Rebase worktree branch onto latest base branch
+  try {
+    run(\`git -C \${treePath} rebase \${baseBranch}\`);
+  } catch (err) {
+    // Rebase conflict — abort and report
+    try { run(\`git -C \${treePath} rebase --abort\`); } catch {}
+    fail(\`Rebase of \${branch} onto \${baseBranch} failed (conflicts). Resolve manually in \${treePath} or merge instead.\`);
+  }
+
+  out({
+    branch,
+    rebased_onto: baseBranch,
+    worktree: treePath,
+    status: 'success',
+    note: 'Branch is now up-to-date with base. Use merge when ready.',
   });
 }
 
 function cmdMerge() {
   const worktreeName = flag('worktree');
-  if (!worktreeName) {
-    fail('Usage: worktree-manager.mjs merge --worktree <name>');
-  }
+  if (!worktreeName) fail('Usage: worktree-manager.mjs merge --worktree <name>');
 
   const treePath = join('.trees', worktreeName);
   let branch;
-  try {
-    branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`);
-  } catch {
-    fail(\`Could not determine branch for worktree: \${treePath}\`);
+  try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
+  catch { fail(\`Could not determine branch for worktree: \${treePath}\`); }
+
+  if (isBranchMerged(branch)) {
+    out({ merged: branch, into: getBaseBranch(), status: 'already-merged' });
+    return;
   }
 
-  // Determine target branch
-  let targetBranch = 'dev';
+  const targetBranch = getBaseBranch();
+
+  // Rebase before merge to keep history clean and catch conflicts early
   try {
-    run('git rev-parse --verify dev');
+    try { run('git remote get-url origin'); run('git fetch origin'); } catch {}
+    run(\`git -C \${treePath} rebase \${targetBranch}\`);
   } catch {
-    try {
-      run('git rev-parse --verify main');
-      targetBranch = 'main';
-    } catch {
-      targetBranch = 'master';
-    }
+    // Rebase failed — abort and try direct merge instead
+    try { run(\`git -C \${treePath} rebase --abort\`); } catch {}
+    process.stderr.write(\`[FISHI] Rebase failed — falling back to merge commit\\n\`);
   }
 
-  // Ensure main repo is on the target branch before merging
   const currentBranch = run('git rev-parse --abbrev-ref HEAD');
+
   try {
-    if (currentBranch !== targetBranch) {
-      run(\`git checkout \${targetBranch}\`);
-    }
+    if (currentBranch !== targetBranch) run(\`git checkout \${targetBranch}\`);
     run(\`git merge --no-ff \${branch} -m "Merge \${branch} into \${targetBranch}"\`);
   } catch (err) {
-    // If merge fails, ensure we're back on the target branch
     try { run(\`git merge --abort\`); } catch {}
     try { run(\`git checkout \${targetBranch}\`); } catch {}
     fail(\`Merge failed: \${err.message}. Main repo restored to \${targetBranch}.\`);
   }
 
-  // Emit monitoring event
-  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => { try { import(new URL('file:///' + ROOT.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href).then(m2 => m2.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {} }); } catch {}
+  // NOTE: Worktree is NOT removed after merge. It stays alive until sprint-cleanup.
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {}
 
   out({
     merged: branch,
     into: targetBranch,
     status: 'success',
+    worktree_preserved: true,
+    note: 'Worktree kept alive — use sprint-cleanup after sprint completes',
   });
 }
 
 function cmdCleanup() {
   const worktreeName = flag('worktree');
-  if (!worktreeName) {
-    fail('Usage: worktree-manager.mjs cleanup --worktree <name>');
-  }
+  if (!worktreeName) fail('Usage: worktree-manager.mjs cleanup --worktree <name>');
 
   const treePath = join('.trees', worktreeName);
   const absTreePath = join(ROOT, treePath);
 
-  // Get the branch name before removing
   let branch;
-  try {
-    branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`);
-  } catch {
-    // Worktree may already be partially removed
-    branch = null;
+  try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
+  catch { branch = null; }
+
+  // SAFETY: Refuse to cleanup unmerged branches unless --force
+  if (branch && branch !== 'HEAD' && !isBranchMerged(branch)) {
+    if (!process.argv.includes('--force')) {
+      fail(\`Branch \${branch} has unmerged work. Merge first (worktree-manager.mjs merge --worktree \${worktreeName}) or use --force to delete.\`);
+    }
+    process.stderr.write(\`WARNING: Force-deleting unmerged branch \${branch}\\n\`);
   }
 
-  // Remove worktree (--force handles untracked files like go.sum, build artifacts)
-  try {
-    run(\`git worktree remove \${treePath} --force\`);
-  } catch {
-    // Fallback: manual removal + prune (handles cases git worktree remove can't)
+  // Remove worktree
+  try { run(\`git worktree remove \${treePath} --force\`); }
+  catch {
     try {
-      if (existsSync(absTreePath)) {
-        rmSync(absTreePath, { recursive: true, force: true });
-      }
+      if (existsSync(absTreePath)) rmSync(absTreePath, { recursive: true, force: true });
       run(\`git worktree prune\`);
     } catch {
-      // Last resort — just prune
       try { run(\`git worktree prune\`); } catch {}
     }
   }
 
-  // Delete the branch — but ONLY if merged or --force is passed
+  // Delete branch (safe delete — only works if merged, or force)
   if (branch && branch !== 'HEAD') {
-    try {
-      run(\`git branch -d \${branch}\`);
-    } catch {
-      // Branch has unmerged changes — auto-merge before deleting
-      const forceFlag = process.argv.includes('--force');
-      if (!forceFlag) {
-        // Try to merge the branch into the main branch first
-        let targetBranch = 'master';
-        try { run('git rev-parse --verify dev'); targetBranch = 'dev'; } catch {
-          try { run('git rev-parse --verify main'); targetBranch = 'main'; } catch {}
-        }
-        try {
-          const currentBranch = run('git rev-parse --abbrev-ref HEAD');
-          if (currentBranch !== targetBranch) {
-            run(\`git checkout \${targetBranch}\`);
-          }
-          run(\`git merge --no-ff \${branch} -m "Merge \${branch} into \${targetBranch} (auto-merge on cleanup)"\`);
-          run(\`git branch -d \${branch}\`);
-        } catch {
-          // Merge failed — abort merge, restore target branch, preserve the agent branch
-          try { run(\`git merge --abort\`); } catch {}
-          try { run(\`git checkout \${targetBranch}\`); } catch {}
-          process.stderr.write(\`WARNING: Branch \${branch} has unmerged work and merge failed. Branch preserved — merge manually.\\n\`);
-        }
-      } else {
-        // --force: delete even if unmerged (user explicitly chose this)
-        try {
-          run(\`git branch -D \${branch}\`);
-        } catch {
-          // Ignore — branch may already be gone
-        }
+    try { run(\`git branch -d \${branch}\`); }
+    catch {
+      if (process.argv.includes('--force')) {
+        try { run(\`git branch -D \${branch}\`); } catch {}
       }
+      // If not --force and branch -d fails, branch is preserved
     }
   }
 
-  // Update registry
   removeWorktreeEntry(worktreeName);
 
-  // Emit monitoring event
-  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => { try { import(new URL('file:///' + ROOT.replace(/\\\\/g, '/') + '/.fishi/scripts/monitor-emitter.mjs').href).then(m2 => m2.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => {}); } catch {} }); } catch {}
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.cleaned', agent: 'system', data: { worktree: worktreeName } })).catch(() => {}); } catch {}
+
+  out({ removed: treePath, branch: branch || 'unknown', status: 'cleaned' });
+}
+
+function cmdSprintCleanup() {
+  const sprintNum = flag('sprint');
+  if (!sprintNum) fail('Usage: worktree-manager.mjs sprint-cleanup --sprint <N>');
+
+  // Check sprint completion
+  const sprintsDir = join(ROOT, '.fishi', 'taskboard', 'sprints');
+  const sprintFiles = existsSync(sprintsDir) ? readdirSync(sprintsDir).filter(f => f.includes(\`sprint-\${sprintNum}\`) || f.includes(\`sprint-0\${sprintNum}\`)) : [];
+
+  if (sprintFiles.length === 0) {
+    fail(\`Sprint \${sprintNum} file not found. Cannot cleanup without sprint tracking.\`);
+  }
+
+  const sprintContent = readFileSync(join(sprintsDir, sprintFiles[0]), 'utf-8').toLowerCase();
+  if (!sprintContent.includes('completed') && !sprintContent.includes('done') && !sprintContent.includes('closed')) {
+    fail(\`Sprint \${sprintNum} not marked as COMPLETED. Mark it done before cleanup.\`);
+  }
+
+  const unchecked = (sprintContent.match(/^\\s*-\\s*\\[\\s*\\]/gm) || []).length;
+  if (unchecked > 0) {
+    fail(\`Sprint \${sprintNum} has \${unchecked} unchecked tasks. Complete all tasks before cleanup.\`);
+  }
+
+  // Get all worktrees
+  let rawList;
+  try { rawList = run('git worktree list --porcelain'); } catch { rawList = ''; }
+
+  const cleaned = [];
+  const preserved = [];
+  const blocks = rawList.split('\\n\\n').filter(Boolean);
+
+  for (const block of blocks) {
+    const lines = block.split('\\n');
+    let path = '', branch = '';
+    for (const line of lines) {
+      if (line.startsWith('worktree ')) path = line.slice(9);
+      if (line.startsWith('branch ')) branch = line.slice(7).replace('refs/heads/', '');
+    }
+
+    if (!branch.startsWith('agent/')) continue;
+
+    const treeName = path.split('/').pop() || path.split('\\\\').pop() || '';
+    if (!treeName) continue;
+
+    if (isBranchMerged(branch)) {
+      // Safe to remove — work is merged
+      const treePath = join('.trees', treeName);
+      const absPath = join(ROOT, treePath);
+      try { run(\`git worktree remove \${treePath} --force\`); }
+      catch {
+        try { if (existsSync(absPath)) rmSync(absPath, { recursive: true, force: true }); run('git worktree prune'); } catch {}
+      }
+      try { run(\`git branch -d \${branch}\`); } catch {}
+      removeWorktreeEntry(treeName);
+      cleaned.push({ worktree: treeName, branch, status: 'cleaned' });
+    } else {
+      preserved.push({ worktree: treeName, branch, status: 'PRESERVED — unmerged work' });
+    }
+  }
 
   out({
-    removed: treePath,
-    branch: branch || 'unknown',
-    status: 'cleaned',
+    sprint: parseInt(sprintNum, 10),
+    cleaned: cleaned.length,
+    preserved: preserved.length,
+    details: [...cleaned, ...preserved],
+    status: preserved.length > 0 ? 'partial — unmerged worktrees preserved' : 'complete',
+  });
+}
+
+function cmdVerify() {
+  let rawList;
+  try { rawList = run('git worktree list --porcelain'); } catch { rawList = ''; }
+
+  const activeWorktrees = [];
+  const staleBranches = [];
+  const blocks = rawList.split('\\n\\n').filter(Boolean);
+
+  for (const block of blocks) {
+    const lines = block.split('\\n');
+    let path = '', branch = '';
+    for (const line of lines) {
+      if (line.startsWith('worktree ')) path = line.slice(9);
+      if (line.startsWith('branch ')) branch = line.slice(7).replace('refs/heads/', '');
+    }
+    if (branch.startsWith('agent/')) {
+      activeWorktrees.push({ path, branch, merged: isBranchMerged(branch) });
+    }
+  }
+
+  // Check for stale agent branches without worktrees
+  try {
+    const allBranches = run('git branch').split('\\n').map(b => b.trim().replace(/^\\* /, ''));
+    for (const b of allBranches) {
+      if (b.startsWith('agent/')) {
+        const hasWorktree = activeWorktrees.some(w => w.branch === b);
+        if (!hasWorktree) staleBranches.push({ branch: b, merged: isBranchMerged(b) });
+      }
+    }
+  } catch {}
+
+  const clean = activeWorktrees.length === 0 && staleBranches.length === 0;
+
+  out({
+    clean,
+    active_worktrees: activeWorktrees.length,
+    stale_branches: staleBranches.length,
+    worktrees: activeWorktrees,
+    stale: staleBranches,
+    status: clean ? 'verified — ready for next sprint' : 'issues found',
   });
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────
 
 switch (command) {
-  case 'create':
-    cmdCreate();
-    break;
-  case 'status':
-    cmdStatus();
-    break;
-  case 'review':
-    cmdReview();
-    break;
-  case 'merge':
-    cmdMerge();
-    break;
-  case 'cleanup':
-    cmdCleanup();
-    break;
+  case 'create': cmdCreate(); break;
+  case 'status': cmdStatus(); break;
+  case 'review': cmdReview(); break;
+  case 'rebase': cmdRebase(); break;
+  case 'merge': cmdMerge(); break;
+  case 'cleanup': cmdCleanup(); break;
+  case 'sprint-cleanup': cmdSprintCleanup(); break;
+  case 'verify': cmdVerify(); break;
   default:
     out({
       error: \`Unknown command: \${command || '(none)'}\`,
-      usage: 'worktree-manager.mjs <create|status|review|merge|cleanup> [options]',
+      usage: 'worktree-manager.mjs <command> [options]',
       commands: {
-        create: '--agent <name> --task <slug> [--coordinator <name>]',
-        status: '(no args)',
-        review: '--worktree <name>',
-        merge: '--worktree <name>',
-        cleanup: '--worktree <name>',
+        create: '--agent <name> --task <slug> [--coordinator <name>] [--scope <paths>] [--depends-on <task-ids>]',
+        status: '(no args) — list all worktrees with merge status',
+        review: '--worktree <name> — diff stats for a worktree',
+        rebase: '--worktree <name> — rebase worktree branch onto latest base branch',
+        merge: '--worktree <name> — rebase + merge to base branch (keeps worktree alive)',
+        cleanup: '--worktree <name> — remove worktree (refuses if unmerged unless --force)',
+        'sprint-cleanup': '--sprint <N> — batch cleanup all merged worktrees after sprint completion',
+        verify: '(no args) — confirm zero active worktrees and stale branches',
       },
     });
     process.exit(1);
