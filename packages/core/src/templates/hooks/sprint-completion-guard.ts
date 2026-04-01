@@ -12,6 +12,7 @@ export function getSprintCompletionGuardHook(): string {
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 
 const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
 
@@ -86,6 +87,30 @@ if (existsSync(boardPath)) {
   if (!doneSection || !doneSection.includes('[x]')) {
     issues.push('Board has no completed tasks in Done column');
   }
+}
+
+// Check 4: No active agent worktrees remaining
+try {
+  const worktreeList = execSync('git worktree list --porcelain', { cwd: ROOT, encoding: 'utf-8' });
+  const activeAgentWorktrees = worktreeList.split('\\n').filter(l => l.startsWith('branch refs/heads/agent/')).length;
+  if (activeAgentWorktrees > 0) {
+    issues.push(\`\${activeAgentWorktrees} agent worktree(s) still active. Run: node .fishi/scripts/worktree-manager.mjs sprint-cleanup --sprint \${prevSprint}\`);
+  }
+} catch {}
+
+// Check 5: QA approval required
+const qaResultPath = join(ROOT, '.fishi', 'state', 'qa-results', \`sprint-\${prevSprint}-full-review.json\`);
+if (existsSync(qaResultPath)) {
+  try {
+    const qaResult = JSON.parse(readFileSync(qaResultPath, 'utf-8'));
+    if (qaResult.result !== 'APPROVED') {
+      issues.push(\`Sprint \${prevSprint} QA review not approved (result: \${qaResult.result}). Run full QA review before starting Sprint \${requestedSprint}.\`);
+    }
+  } catch {
+    issues.push(\`Sprint \${prevSprint} QA result file is corrupted. Re-run QA review.\`);
+  }
+} else {
+  issues.push(\`Sprint \${prevSprint} QA review not found. Run full QA review before starting Sprint \${requestedSprint}.\`);
 }
 
 if (issues.length > 0) {
