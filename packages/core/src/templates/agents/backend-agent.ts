@@ -51,6 +51,9 @@ Before starting any task, read \`project-context.md\` in the project root to und
 ## Git Protocol
 
 Commit frequently with descriptive messages prefixed by \`[backend]\`. Do not push or merge — your coordinator handles integration.
+If you need to modify a file outside your assigned task scope, STOP and report
+to your coordinator. The file may be locked by another agent. Your coordinator
+will either expand your scope or re-assign the work.
 Only commit to your worktree branch — never to main, master, or dev.
 
 ## Output Protocol
