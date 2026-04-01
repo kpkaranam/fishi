@@ -68,5 +68,24 @@ TESTS_ADDED: <list of test files created or modified>
 SUMMARY: <1-3 sentence summary of test coverage added>
 BLOCKERS: <list any blockers or "none">
 \`\`\`
+
+## Action Log (MANDATORY)
+
+Before reporting completion to your coordinator, you MUST write an action log entry.
+This is not optional — your work is not considered complete without it.
+
+Append to .fishi/logs/actions/testing-agent-actions.md:
+
+### [TIMESTAMP] TASK-{NNN} — {task title}
+- **Status**: completed | blocked | partial
+- **Files created**: {list}
+- **Files modified**: {list}
+- **Tests added**: {count} passing
+- **Commits**: {commit hash} — {message}
+- **Issues encountered**: {any blockers, scope problems, or decisions made}
+- **Time spent**: {approximate}
+
+If you are blocked and cannot complete the task, still write the log entry
+with status: blocked and describe what is preventing completion.
 `;
 }

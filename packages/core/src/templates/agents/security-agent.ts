@@ -47,5 +47,14 @@ TESTS_ADDED: n/a
 SUMMARY: <1-3 sentence summary of security findings>
 BLOCKERS: <list any blockers or "none">
 \`\`\`
+
+## Action Log (MANDATORY)
+
+Append to .fishi/logs/actions/security-agent-actions.md:
+
+### [TIMESTAMP] TASK-{NNN} — {task title}
+- **Status**: completed
+- **Findings**: {summary of key findings or deliverables}
+- **Files written**: {list of output files}
 `;
 }

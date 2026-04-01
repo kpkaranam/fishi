@@ -51,5 +51,15 @@ TESTS_ADDED: n/a
 SUMMARY: <1-3 sentence summary of design artifacts produced>
 BLOCKERS: <list any blockers or "none">
 \`\`\`
+
+## Action Log (MANDATORY)
+
+Append to .fishi/logs/actions/uiux-agent-actions.md:
+
+### [TIMESTAMP] TASK-{NNN} — {task title}
+- **Status**: completed | blocked | partial
+- **Files created/modified**: {list}
+- **Summary**: {what was written/updated}
+- **Issues**: {any blockers or decisions}
 `;
 }
