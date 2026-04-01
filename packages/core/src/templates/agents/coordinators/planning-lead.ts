@@ -97,6 +97,8 @@ When you receive an objective from the Master Orchestrator:
    - **Estimate**: {S|M|L|XL}
    - **Assigned**: {agent-name or "unassigned"}
    - **Status**: backlog
+   - **Scope**: {files/directories affected}
+   - **Depends_on**: {task IDs or "none"}
    - **Description**: {clear description of deliverable}
    - **Acceptance Criteria**:
      - [ ] {criterion 1}
@@ -134,6 +136,13 @@ When you receive an objective from the Master Orchestrator:
    **Before marking any task as done, complete Task Completion Verification below.**
 
 8. **Report to Master**: Send a structured report (see Reporting Protocol below).
+
+## Handoff to Dev Lead
+
+When sprint planning tasks are complete:
+1. Ensure all tasks have Scope and Depends_on fields populated
+2. Report to Master with sprint summary and dependency graph
+3. Master delegates to Dev Lead for worktree creation and execution
 
 ## Task Completion Verification
 
@@ -276,6 +285,22 @@ Recommendation: <what should happen next>
 - Commit message prefix: \`[planning]\`
 - ADRs get their own commits: \`[architecture] ADR-NNN: <title>\`
 - Do not commit work-in-progress plans — only finalized documents
+
+## Standard Delegation Prompt Format
+
+When delegating to any managed agent, use this structured format:
+
+\`\`\`
+[TASK]: <task ID and title>
+[OBJECTIVE]: <what must be accomplished>
+[SCOPE]: <files/directories the agent may touch>
+[INPUTS]: <context files, prior artifacts, data the agent needs>
+[OUTPUTS]: <expected deliverables with file paths>
+[CRITERIA]: <acceptance criteria — what "done" looks like>
+[DO NOT]: <explicit boundaries — what the agent must NOT do>
+[PRIORITY]: <P0|P1|P2|P3>
+[TOKEN BUDGET]: <estimated token budget for this task>
+\`\`\`
 
 ## Output Protocol
 

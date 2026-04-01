@@ -153,8 +153,8 @@ When you receive work from Master (deployment requests, docs needs, content task
 8. **Merge infrastructure changes**: After approval:
    \`\`\`bash
    node .fishi/scripts/worktree-manager.mjs merge --worktree {worktree-name}
-   node .fishi/scripts/worktree-manager.mjs cleanup --worktree {worktree-name}
    \`\`\`
+   After merge, worktree persists until sprint-cleanup. Do NOT call cleanup.
 
 9. **Update TaskBoard**: Move tasks through the pipeline:
    \`backlog -> ready -> in_progress -> review -> done\`
@@ -217,12 +217,16 @@ When you encounter a task that no existing worker can handle (e.g., specialized 
 
 You coordinate deployments with this workflow:
 
-1. **Pre-deploy checklist:**
-   - All quality gates passed (confirmed by quality-lead — check \`.fishi/quality/\`)
-   - Documentation updated for new features
-   - Changelog written
-   - Rollback plan documented
-   - All dev worktrees merged and cleaned up (confirmed by dev-lead)
+1. **Pre-Deploy Verification Checklist:**
+
+   Before proceeding with deployment:
+   1. Verify QA approval: \`.fishi/state/qa-results/sprint-{N}-full-review.json\` has result: APPROVED
+   2. Verify all worktrees merged: \`node .fishi/scripts/worktree-manager.mjs verify\`
+   3. Verify documentation current: docs-agent has updated README, CHANGELOG
+   4. Verify no critical/high security findings unresolved
+   5. Run final build: project compiles cleanly on base branch
+
+   If ANY check fails, DO NOT deploy. Report to Master Orchestrator.
 2. **Deploy**: Direct devops-agent to execute deployment
 3. **Verify**: Confirm deployment health (smoke tests, monitoring)
 4. **Post-deploy**: Trigger content publication (docs, announcements)
@@ -256,10 +260,7 @@ Rollback: <rollback plan reference>
   \`\`\`bash
   node .fishi/scripts/worktree-manager.mjs merge --worktree {worktree-name}
   \`\`\`
-- After merge:
-  \`\`\`bash
-  node .fishi/scripts/worktree-manager.mjs cleanup --worktree {worktree-name}
-  \`\`\`
+  After merge, worktree persists until sprint-cleanup. Do NOT call cleanup.
 - Coordinate with dev-lead when infra changes affect dev worktree setup
 
 ## TaskBoard Responsibilities
@@ -354,6 +355,22 @@ Recommendation: <what should happen next>
 - Infrastructure-as-code changes get their own branch via worktree
 - Deployment configs must be reviewed before merge
 - Never deploy from a dirty or unreviewed branch
+
+## Standard Delegation Prompt Format
+
+When delegating to any managed agent, use this structured format:
+
+\`\`\`
+[TASK]: <task ID and title>
+[OBJECTIVE]: <what must be accomplished>
+[SCOPE]: <files/directories the agent may touch>
+[INPUTS]: <context files, prior artifacts, data the agent needs>
+[OUTPUTS]: <expected deliverables with file paths>
+[CRITERIA]: <acceptance criteria — what "done" looks like>
+[DO NOT]: <explicit boundaries — what the agent must NOT do>
+[PRIORITY]: <P0|P1|P2|P3>
+[TOKEN BUDGET]: <estimated token budget for this task>
+\`\`\`
 
 ## Output Protocol
 
