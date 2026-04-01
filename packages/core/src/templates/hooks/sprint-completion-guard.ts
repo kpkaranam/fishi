@@ -51,6 +51,16 @@ if (requestedSprint <= 1) {
   process.exit(0); // Sprint 1 has no predecessor to check
 }
 
+// Auto-sync sprint-meta with git state before checking
+try {
+  const wmScript = join(ROOT, '.fishi', 'scripts', 'worktree-manager.mjs');
+  if (existsSync(wmScript)) {
+    execSync(\`node "\${wmScript}" sync\`, {
+      cwd: ROOT, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000
+    });
+  }
+} catch {}
+
 // Check if previous sprint is properly closed
 const prevSprint = requestedSprint - 1;
 const sprintsDir = join(ROOT, '.fishi', 'taskboard', 'sprints');

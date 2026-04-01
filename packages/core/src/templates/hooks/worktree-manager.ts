@@ -1200,6 +1200,78 @@ function cmdAutoRegister() {
   });
 }
 
+// ── Sync: reconcile sprint-meta with actual git/board state ─────────
+
+function cmdSync() {
+  const meta = readSprintMeta();
+  if (!meta || !meta.tasks || meta.tasks.length === 0) {
+    out({ synced: 0, still_pending: 0, tasks: [] });
+    return;
+  }
+
+  const baseBranch = getBaseBranch();
+
+  // Get all merged branches
+  let mergedBranches = [];
+  try {
+    mergedBranches = run('git branch --merged ' + baseBranch)
+      .split('\\n')
+      .map(b => b.replace(/^[*+]\\s*/, '').trim())
+      .filter(Boolean);
+  } catch {}
+
+  // Read board.md to check Done section
+  const boardPath = join(ROOT, '.fishi', 'taskboard', 'board.md');
+  let doneTasks = [];
+  if (existsSync(boardPath)) {
+    const board = readFileSync(boardPath, 'utf-8');
+    const doneSection = board.split(/^## Done/m)[1] || '';
+    // Extract task IDs from Done section
+    const matches = doneSection.matchAll(/TASK-(\\d+)|(?:^- \\[x\\] )(\\S+)/gm);
+    for (const m of matches) {
+      doneTasks.push((m[1] || m[2] || '').toLowerCase());
+    }
+  }
+
+  let synced = 0;
+  for (const task of meta.tasks) {
+    if (task.merge_status === 'merged') continue;
+
+    // Check 1: Is any agent branch for this task merged?
+    const taskInBranch = mergedBranches.some(b =>
+      b.includes(task.id) ||
+      b.includes(task.agent) ||
+      (task.worktree && b.includes(task.worktree.replace('auto-', '')))
+    );
+
+    // Check 2: Is this task in the Done section of board.md?
+    const taskInDone = doneTasks.some(d =>
+      d === task.id ||
+      d === task.id.replace(/^0+/, '') ||
+      task.id.includes(d)
+    );
+
+    if (taskInBranch || taskInDone) {
+      task.merge_status = 'merged';
+      task.qa_quick = task.qa_quick || null; // Keep existing if set
+      synced++;
+    }
+  }
+
+  if (synced > 0) {
+    writeSprintMeta(meta);
+    // Also sync board.md — move any newly-detected merged tasks to Done
+    for (const task of meta.tasks) {
+      if (task.merge_status === 'merged') {
+        syncBoardTask(task.id, 'Done');
+      }
+    }
+  }
+
+  const stillPending = meta.tasks.filter(t => t.merge_status !== 'merged').length;
+  out({ synced, still_pending: stillPending, tasks: meta.tasks.map(t => ({ id: t.id, agent: t.agent, merge_status: t.merge_status })) });
+}
+
 // ── Dispatch ─────────────────────────────────────────────────────────
 
 switch (command) {
@@ -1213,6 +1285,7 @@ switch (command) {
   case 'sprint-cleanup': cmdSprintCleanup(); break;
   case 'merge-ready': cmdMergeReady(); break;
   case 'quick-check': cmdQuickCheck(); break;
+  case 'sync': cmdSync(); break;
   case 'verify': cmdVerify(); break;
   default:
     out({
@@ -1229,6 +1302,7 @@ switch (command) {
         'sprint-cleanup': '--sprint <N> — batch cleanup all merged worktrees after sprint completion',
         'merge-ready': '--worktree <name> — check if all dependency tasks are merged before allowing merge',
         'quick-check': '--task <task-id> [--diff-content <text>] — run automated post-merge validation (tests, lint, typecheck, secret scan)',
+        sync: '(no args) — reconcile sprint-meta with actual git merge state and board.md Done section',
         verify: '(no args) — confirm zero active worktrees and stale branches',
       },
     });

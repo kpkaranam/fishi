@@ -194,6 +194,17 @@ try {
     } catch {}
   }
 
+  // ── Auto-sync sprint-meta with git state after agent completes ──────
+  try {
+    const { execSync: execWm } = await import('child_process');
+    const wmScript = join(projectRoot, '.fishi', 'scripts', 'worktree-manager.mjs');
+    if (existsSync(wmScript)) {
+      execWm(\`node "\${wmScript}" sync\`, {
+        cwd: projectRoot, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000
+      });
+    }
+  } catch {}
+
   // Emit monitoring event
   try {
     const { emitMonitorEvent } = await import(new URL('./monitor-emitter.mjs', import.meta.url).href);
