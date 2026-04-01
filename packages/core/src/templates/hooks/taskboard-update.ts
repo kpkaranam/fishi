@@ -9,12 +9,151 @@ export function getTaskboardUpdateHook(): string {
   return `#!/usr/bin/env node
 // taskboard-update.mjs — FISHI taskboard update hook
 // Zero dependencies: uses only Node.js built-ins
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const projectRoot = process.env.FISHI_PROJECT_ROOT || process.cwd();
 const boardPath = join(projectRoot, '.fishi', 'taskboard', 'board.md');
 const sprintsDir = join(projectRoot, '.fishi', 'taskboard', 'sprints');
+const sprintMetaPath = join(projectRoot, '.fishi', 'taskboard', 'sprint-meta.yaml');
+
+// ── Arg parsing ──────────────────────────────────────────────────────
+const args = process.argv.slice(2);
+const command = args[0];
+
+function getFlag(name) {
+  const idx = args.indexOf('--' + name);
+  if (idx === -1 || idx + 1 >= args.length) return null;
+  return args[idx + 1];
+}
+
+// ── Sprint-meta YAML helpers (zero-dep, same format as worktree-manager) ──
+
+function readSprintMeta() {
+  if (!existsSync(sprintMetaPath)) return { sprint: 0, qa_full_retries: 0, tasks: [] };
+  const raw = readFileSync(sprintMetaPath, 'utf-8');
+  const sprintMatch = raw.match(/^sprint:\\s*(\\d+)/m);
+  const qaMatch = raw.match(/^qa_full_retries:\\s*(\\d+)/m);
+  const sprint = sprintMatch ? parseInt(sprintMatch[1], 10) : 0;
+  const qaRetries = qaMatch ? parseInt(qaMatch[1], 10) : 0;
+
+  const tasks = [];
+  const taskBlocks = raw.split(/^\\s+-\\s+id:\\s*/m).slice(1);
+  for (const block of taskBlocks) {
+    const lines = block.split('\\n');
+    const id = lines[0].trim();
+    const get = (key) => {
+      const line = lines.find(l => l.match(new RegExp('^\\\\s+' + key + ':\\\\s')));
+      if (!line) return null;
+      return line.split(':').slice(1).join(':').trim();
+    };
+    const depsLine = lines.find(l => l.match(/^\\s+depends_on:/));
+    let depends_on = [];
+    if (depsLine) {
+      const bracketMatch = depsLine.match(/\\[([^\\]]*)\\]/);
+      if (bracketMatch && bracketMatch[1].trim()) {
+        depends_on = bracketMatch[1].split(',').map(d => d.trim());
+      }
+    }
+    tasks.push({
+      id,
+      agent: get('agent') || '',
+      worktree: get('worktree') || '',
+      scope: get('scope') ? get('scope').replace(/^"|"$/g, '') : '',
+      depends_on,
+      merge_status: get('merge_status') || 'pending',
+      qa_quick: get('qa_quick') === 'null' ? null : get('qa_quick'),
+      qa_retries: parseInt(get('qa_retries') || '0', 10),
+    });
+  }
+  return { sprint, qa_full_retries: qaRetries, tasks };
+}
+
+function writeSprintMeta(meta) {
+  const dir = join(projectRoot, '.fishi', 'taskboard');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  let yaml = \`sprint: \${meta.sprint}\\nqa_full_retries: \${meta.qa_full_retries}\\ntasks:\\n\`;
+  for (const t of meta.tasks) {
+    const deps = t.depends_on && t.depends_on.length > 0 ? \`[\${t.depends_on.join(', ')}]\` : '[]';
+    yaml += \`  - id: \${t.id}\\n\`;
+    yaml += \`    agent: \${t.agent}\\n\`;
+    yaml += \`    worktree: \${t.worktree}\\n\`;
+    yaml += \`    scope: "\${t.scope || ''}"\\n\`;
+    yaml += \`    depends_on: \${deps}\\n\`;
+    yaml += \`    merge_status: \${t.merge_status || 'pending'}\\n\`;
+    yaml += \`    qa_quick: \${t.qa_quick === null ? 'null' : t.qa_quick}\\n\`;
+    yaml += \`    qa_retries: \${t.qa_retries || 0}\\n\`;
+  }
+  writeFileSync(sprintMetaPath, yaml, 'utf-8');
+}
+
+// ── Sprint-meta commands ─────────────────────────────────────────────
+
+if (command === 'read-meta') {
+  const meta = readSprintMeta();
+  console.log(JSON.stringify(meta));
+  process.exit(0);
+}
+
+if (command === 'add-task') {
+  const id = getFlag('id');
+  const agent = getFlag('agent') || '';
+  const worktree = getFlag('worktree') || '';
+  const scope = getFlag('scope') || '';
+  const dependsOnRaw = getFlag('depends-on');
+  const depends_on = dependsOnRaw ? dependsOnRaw.split(',').map(d => d.trim()).filter(Boolean) : [];
+
+  if (!id) {
+    console.error('[FISHI] add-task requires --id');
+    process.exit(1);
+  }
+
+  const meta = readSprintMeta();
+  meta.tasks.push({
+    id,
+    agent,
+    worktree,
+    scope,
+    depends_on,
+    merge_status: 'pending',
+    qa_quick: null,
+    qa_retries: 0,
+  });
+  writeSprintMeta(meta);
+  console.log(JSON.stringify({ status: 'added' }));
+  process.exit(0);
+}
+
+if (command === 'update-task') {
+  const id = getFlag('id');
+  const field = getFlag('field');
+  const value = getFlag('value');
+
+  if (!id || !field) {
+    console.error('[FISHI] update-task requires --id and --field');
+    process.exit(1);
+  }
+
+  const meta = readSprintMeta();
+  const task = meta.tasks.find(t => t.id === id);
+  if (!task) {
+    console.error(\`[FISHI] Task \${id} not found\`);
+    process.exit(1);
+  }
+
+  // Handle special types
+  if (value === 'null') {
+    task[field] = null;
+  } else if (/^\\d+$/.test(value)) {
+    task[field] = parseInt(value, 10);
+  } else {
+    task[field] = value;
+  }
+
+  writeSprintMeta(meta);
+  console.log(JSON.stringify({ status: 'updated' }));
+  process.exit(0);
+}
 
 /**
  * Count tasks per column in a markdown taskboard.
