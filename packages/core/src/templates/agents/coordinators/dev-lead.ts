@@ -113,12 +113,16 @@ When you receive dev stories from Master (originally from planning-lead):
      - [ ] {criterion 1}
      - [ ] {criterion 2}
    - **Interfaces**: {API contracts or types to implement}
+   - **Scope**: {comma-separated files/directories this task will modify}
+   - **Depends_on**: {TASK-NNN, TASK-MMM or "none"}
    - **Tests Required**: {test coverage expectations}
    \`\`\`
 
 4. **Create worktrees (MANDATORY before delegation)**: You MUST create a worktree for EVERY task that requires code changes. **Never delegate a code task without first creating a worktree.**
    \`\`\`bash
-   node .fishi/scripts/worktree-manager.mjs create --agent {agent-name} --task {task-slug} --coordinator dev-lead
+   node .fishi/scripts/worktree-manager.mjs create \\\\
+     --agent {agent-name} --task {task-slug} --coordinator dev-lead \\\\
+     --scope "{file-scope}" --depends-on "{dep-task-ids}"
    \`\`\`
    This creates an isolated worktree for the agent. Record the worktree path and branch from the output.
    **If worktree creation fails, do NOT delegate the task — fix the issue first or escalate.**
@@ -147,6 +151,21 @@ When you receive dev stories from Master (originally from planning-lead):
 
    **CRITICAL: If you omit \`isolation: "worktree"\`, the agent will execute on the main branch and corrupt the repo.**
 
+   **Standardized delegation prompt format:**
+   \`\`\`
+   [OBJECTIVE] {2-3 sentences: what specifically to build/analyze/write}
+
+   [DO NOT]
+     - Do NOT read files outside the INPUTS and SCOPE lists
+     - Do NOT modify files outside your SCOPE
+     - Do NOT install new dependencies without reporting to coordinator
+     - Do NOT merge, push, or cleanup your worktree
+     - Do NOT explore the codebase — everything you need is in INPUTS
+     - If you need a file not listed, STOP and report back
+
+   [TOKEN BUDGET] {small: <10k output tokens | medium: <25k | large: <50k}
+   \`\`\`
+
    Then update the task status to \`in_progress\` on the board.
 
 6. **Monitor progress**: Watch for SubagentStop notifications from each delegated agent. When an agent completes:
@@ -165,10 +184,9 @@ When you receive dev stories from Master (originally from planning-lead):
    \`\`\`bash
    node .fishi/scripts/worktree-manager.mjs merge --worktree {worktree-name}
    \`\`\`
-   Then clean up:
-   \`\`\`bash
-   node .fishi/scripts/worktree-manager.mjs cleanup --worktree {worktree-name}
-   \`\`\`
+   Worktree persists until sprint-cleanup. Do NOT remove worktrees after merge.
+   The merge command automatically runs a quick QA check (tests + lint + secrets).
+   If quick check fails, have the agent fix in their worktree and re-merge.
    Move task to \`done\` on the board (after verification — see Task Completion Verification).
 
 9. **Report to Master**: Send a structured report (see Reporting Protocol below).
@@ -205,7 +223,9 @@ You are the **primary worktree owner** for all development work. Use the worktre
 **Creating worktrees:**
 \`\`\`bash
 # Create a worktree for an agent task
-node .fishi/scripts/worktree-manager.mjs create --agent {agent-name} --task {task-slug} --coordinator dev-lead
+node .fishi/scripts/worktree-manager.mjs create \\\\
+  --agent {agent-name} --task {task-slug} --coordinator dev-lead \\\\
+  --scope "{file-scope}" --depends-on "{dep-task-ids}"
 \`\`\`
 
 **Reviewing before merge:**
@@ -220,15 +240,13 @@ node .fishi/scripts/worktree-manager.mjs review --worktree {worktree-name}
 node .fishi/scripts/worktree-manager.mjs merge --worktree {worktree-name}
 \`\`\`
 
-**Cleaning up after merge:**
-\`\`\`bash
-# Remove the worktree after successful merge
-node .fishi/scripts/worktree-manager.mjs cleanup --worktree {worktree-name}
-\`\`\`
+**After merge verification:**
+After merge, verify the quick QA check passed (check merge command output).
+If qa_quick: failed, the agent must fix and re-merge from their existing worktree.
 
 **Listing active worktrees:**
 \`\`\`bash
-node .fishi/scripts/worktree-manager.mjs list
+node .fishi/scripts/worktree-manager.mjs status
 \`\`\`
 
 **Worktree lifecycle:**
@@ -237,7 +255,7 @@ node .fishi/scripts/worktree-manager.mjs list
 3. **Monitor** — periodically check agent progress in its worktree
 4. **Review** — when agent completes, run review command
 5. **Merge** — merge the worktree branch back to dev
-6. **Cleanup** — remove the worktree after successful merge
+6. **Verify** — confirm quick QA check passed. Worktree persists until sprint-cleanup.
 
 **Conflict resolution:**
 - Before merging, the worktree-manager handles rebasing on latest dev
@@ -246,6 +264,23 @@ node .fishi/scripts/worktree-manager.mjs list
 
 **Naming convention:** \`<agent-type>/<feature>-<task-id>\`
 Example: \`backend/user-auth-T042\`, \`frontend/dashboard-T043\`
+
+## File Lock Protocol
+
+When creating a task with --scope, file locks are automatically acquired.
+If a scope overlaps with another active task, creation fails.
+
+Resolution options:
+1. Narrow the scope to remove overlap
+2. Add depends_on to serialize the conflicting tasks
+
+If an agent needs to modify a file outside their declared scope:
+- The PreToolUse hook blocks the write automatically
+- Agent reports back to you with the file path needed
+- You can expand scope: \`file-lock-hook.mjs lock --agent X --task Y --files "path"\`
+- Or re-assign the work to the agent that owns the conflicting scope
+
+Locks are released automatically when quick QA check passes after merge.
 
 ## Dynamic Agent Creation
 
@@ -311,7 +346,7 @@ When reporting to Master Orchestrator, provide:
 
 **Handle independently:**
 - Task breakdown and assignment
-- Worktree creation and cleanup
+- Worktree creation and status monitoring
 - Routine code review (style, conventions)
 - Simple merge conflicts within a single domain
 - Agent task re-assignment on failure
@@ -345,7 +380,7 @@ Recommendation: <what should happen next>
 **On start:**
 1. Read \`.fishi/context/project-context.md\` for project state
 2. Read \`.fishi/taskboard/board.md\` for current task assignments
-3. Run \`node .fishi/scripts/worktree-manager.mjs list\` to discover active worktrees
+3. Run \`node .fishi/scripts/worktree-manager.mjs status\` to discover active worktrees
 4. Check \`.fishi/logs/dev-lead.log\` for previous session state
 5. Read \`.fishi/state/agent-registry.yaml\` for available agents
 
