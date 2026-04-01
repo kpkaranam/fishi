@@ -4,7 +4,7 @@
  * Manages git worktree lifecycle for agent tasks.
  * Worktrees stay alive until sprint-cleanup — merge does NOT remove them.
  *
- * Commands: create, status, review, merge, merge-ready, cleanup, sprint-cleanup, verify
+ * Commands: create, status, review, merge, merge-ready, quick-check, cleanup, sprint-cleanup, verify
  */
 export function getWorktreeManagerScript(): string {
   return `#!/usr/bin/env node
@@ -685,6 +685,139 @@ function cmdVerify() {
   });
 }
 
+function cmdQuickCheck() {
+  const taskId = flag('task');
+  if (!taskId) fail('Usage: worktree-manager.mjs quick-check --task <task-id> [--diff-content <text>]');
+
+  const diffContent = flag('diff-content');
+  const checks = {};
+
+  // ── 1. Test runner detection (first match wins) ──
+  try {
+    let testCmd = null;
+    if (existsSync(join(ROOT, 'package.json'))) {
+      try {
+        const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'));
+        if (pkg.scripts && pkg.scripts.test) testCmd = 'npm test';
+      } catch {}
+    }
+    if (!testCmd) {
+      const vitestGlobs = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mts', 'vitest.config.mjs'];
+      if (vitestGlobs.some(f => existsSync(join(ROOT, f)))) testCmd = 'npx vitest run';
+    }
+    if (!testCmd) {
+      const jestGlobs = ['jest.config.ts', 'jest.config.js', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.json'];
+      if (jestGlobs.some(f => existsSync(join(ROOT, f)))) testCmd = 'npx jest';
+    }
+    if (!testCmd) {
+      if (existsSync(join(ROOT, 'pytest.ini'))) {
+        testCmd = 'pytest';
+      } else if (existsSync(join(ROOT, 'pyproject.toml'))) {
+        try {
+          const pyproject = readFileSync(join(ROOT, 'pyproject.toml'), 'utf-8');
+          if (pyproject.includes('[tool.pytest]')) testCmd = 'pytest';
+        } catch {}
+      }
+    }
+
+    if (!testCmd) {
+      checks.tests = { status: 'skipped', output: 'No test runner detected' };
+    } else {
+      try {
+        const output = run(testCmd);
+        checks.tests = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.tests = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    }
+  } catch {
+    checks.tests = { status: 'skipped', output: 'Error during test detection' };
+  }
+
+  // ── 2. Linter detection ──
+  try {
+    let lintCmd = null;
+    const eslintConfigs = ['.eslintrc', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml',
+      'eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', 'eslint.config.ts'];
+    if (eslintConfigs.some(f => existsSync(join(ROOT, f)))) lintCmd = 'npx eslint .';
+    if (!lintCmd && existsSync(join(ROOT, 'ruff.toml'))) lintCmd = 'ruff check .';
+
+    if (!lintCmd) {
+      checks.lint = { status: 'skipped', output: 'No linter detected' };
+    } else {
+      try {
+        const output = run(lintCmd);
+        checks.lint = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.lint = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    }
+  } catch {
+    checks.lint = { status: 'skipped', output: 'Error during linter detection' };
+  }
+
+  // ── 3. Type checker ──
+  try {
+    if (existsSync(join(ROOT, 'tsconfig.json'))) {
+      try {
+        const output = run('npx tsc --noEmit');
+        checks.typecheck = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.typecheck = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    } else {
+      checks.typecheck = { status: 'skipped', output: 'No tsconfig.json found' };
+    }
+  } catch {
+    checks.typecheck = { status: 'skipped', output: 'Error during typecheck detection' };
+  }
+
+  // ── 4. Secret scan on diff ──
+  try {
+    let diff = '';
+    if (diffContent !== undefined) {
+      diff = diffContent;
+    } else {
+      try { diff = run('git diff HEAD~1'); } catch { diff = ''; }
+    }
+
+    const secretPatterns = [
+      /(?:api[_-]?key|secret|token|password|credential)\\s*[:=]\\s*['"][A-Za-z0-9+\\/=]{16,}['"]/i,
+      /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/,
+      /(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}/,
+      /(?:sk-|pk_live_|sk_live_)[A-Za-z0-9]{20,}/,
+    ];
+
+    const matches = [];
+    for (const pattern of secretPatterns) {
+      const m = diff.match(pattern);
+      if (m) matches.push(m[0].slice(0, 100));
+    }
+
+    checks.secrets = matches.length > 0
+      ? { status: 'failed', matches }
+      : { status: 'passed', matches: [] };
+  } catch {
+    checks.secrets = { status: 'passed', matches: [] };
+  }
+
+  // ── 5. Compute overall result and write ──
+  const overallResult = Object.values(checks).some(c => c.status === 'failed') ? 'failed' : 'passed';
+
+  const resultObj = {
+    task_id: taskId,
+    timestamp: new Date().toISOString(),
+    result: overallResult,
+    checks,
+  };
+
+  const qaDir = join(ROOT, '.fishi', 'state', 'qa-results');
+  if (!existsSync(qaDir)) mkdirSync(qaDir, { recursive: true });
+  writeFileSync(join(qaDir, \`\${taskId}-quick.json\`), JSON.stringify(resultObj, null, 2), 'utf-8');
+
+  out(resultObj);
+}
+
 function cmdMergeReady() {
   const worktreeName = flag('worktree');
   if (!worktreeName) fail('Usage: worktree-manager.mjs merge-ready --worktree <name>');
@@ -731,6 +864,7 @@ switch (command) {
   case 'cleanup': cmdCleanup(); break;
   case 'sprint-cleanup': cmdSprintCleanup(); break;
   case 'merge-ready': cmdMergeReady(); break;
+  case 'quick-check': cmdQuickCheck(); break;
   case 'verify': cmdVerify(); break;
   default:
     out({
@@ -745,6 +879,7 @@ switch (command) {
         cleanup: '--worktree <name> — remove worktree (refuses if unmerged unless --force)',
         'sprint-cleanup': '--sprint <N> — batch cleanup all merged worktrees after sprint completion',
         'merge-ready': '--worktree <name> — check if all dependency tasks are merged before allowing merge',
+        'quick-check': '--task <task-id> [--diff-content <text>] — run automated post-merge validation (tests, lint, typecheck, secret scan)',
         verify: '(no args) — confirm zero active worktrees and stale branches',
       },
     });
