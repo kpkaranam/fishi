@@ -280,6 +280,10 @@ function cmdCreate() {
     }
   }
 
+  // Write agent identity for file-lock enforcement
+  const agentEnvPath = join(absTreePath, '.env.fishi');
+  writeFileSync(agentEnvPath, 'FISHI_CURRENT_AGENT=' + agentSlug + '\\nFISHI_CURRENT_TASK=' + taskSlug + '\\n');
+
   appendWorktreeEntry(agentSlug, taskSlug, coordinatorSlug, branch, treePath);
 
   // ── Scope: acquire file locks via file-lock-hook ──
@@ -685,6 +689,7 @@ function cmdMerge() {
       task.merge_status = 'merged';
       task.qa_quick = 'passed';
       writeSprintMeta(meta);
+      try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'qa.quick_passed', agent: 'system', data: { task_id: taskId } })).catch(() => {}); } catch {}
       // Release file locks
       try {
         const lockScript = join(ROOT, '.fishi', 'scripts', 'file-lock-hook.mjs');
@@ -696,6 +701,7 @@ function cmdMerge() {
       task.qa_quick = 'failed';
       task.qa_retries = (task.qa_retries || 0) + 1;
       writeSprintMeta(meta);
+      try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'qa.quick_failed', agent: 'system', data: { task_id: taskId, retries: task.qa_retries } })).catch(() => {}); } catch {}
       // Escalation if retries >= 3
       if (task.qa_retries >= 3) {
         const escDir = join(ROOT, '.fishi', 'state', 'escalations');
@@ -833,6 +839,8 @@ function cmdSprintCleanup() {
       preserved.push({ worktree: treeName, branch, status: 'PRESERVED — unmerged work' });
     }
   }
+
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'sprint.cleaned', agent: 'system', data: { sprint: parseInt(sprintNum, 10), cleaned: cleaned.length, preserved: preserved.length } })).catch(() => {}); } catch {}
 
   out({
     sprint: parseInt(sprintNum, 10),
@@ -1050,6 +1058,7 @@ function cmdMergeReady() {
   if (blockedBy.length === 0) {
     out({ ready: true });
   } else {
+    try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'merge.blocked', agent: 'system', data: { worktree: worktreeName, blocked_by: blockedBy } })).catch(() => {}); } catch {}
     out({ ready: false, blocked_by: blockedBy });
   }
 }

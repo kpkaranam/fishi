@@ -121,13 +121,25 @@ function findOverlaps(newPaths, locks, agent, task) {
 const { cmd, opts } = parseArgs();
 
 if (cmd === 'check') {
-  if (!opts.file || !opts.agent) fail('Usage: check --file "path" --agent X');
+  if (!opts.file) fail('Usage: check --file "path" [--agent X]');
+
+  // Agent detection with fallback chain
+  const currentAgent = opts.agent
+    || (() => { try { const f = readFileSync(join(process.cwd(), '.env.fishi'), 'utf-8'); const m = f.match(/FISHI_CURRENT_AGENT=(.*)/); return m ? m[1].trim() : null; } catch { return null; } })()
+    || null;
+
+  if (!currentAgent) {
+    // No agent context — allow the write (likely not in a worktree)
+    out({ status: 'allowed', reason: 'no agent context' });
+    process.exit(0);
+  }
+
   const file = opts.file.trim();
   const locks = readLocks();
 
   if (!isExempt(file)) {
     const locked = locks.find(l => {
-      if (l.agent === opts.agent) return false;
+      if (l.agent === currentAgent) return false;
       // Exact match
       if (l.file === file) return true;
       // File falls inside a directory scope lock
@@ -135,6 +147,7 @@ if (cmd === 'check') {
       return false;
     });
     if (locked) {
+      try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'filelock.blocked', agent: currentAgent, data: { file: file, locked_by: locked.agent } })).catch(() => {}); } catch {}
       out({ status: 'blocked', file, lockedBy: locked.agent, lockedTask: locked.task, lockedAt: locked.lockedAt });
       process.exit(2);
     }
@@ -163,6 +176,7 @@ if (cmd === 'check') {
     }
   }
   writeLocks(locks);
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'filelock.acquired', agent: opts.agent, data: { task: opts.task, scope: paths.join(',') } })).catch(() => {}); } catch {}
   out({ success: true, locked: added, agent: opts.agent, task: opts.task });
 
 } else if (cmd === 'lock') {
@@ -208,6 +222,7 @@ if (cmd === 'check') {
     else remaining.push(l);
   }
   writeLocks(remaining);
+  try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'filelock.released', agent: 'system', data: { task: opts.task } })).catch(() => {}); } catch {}
   out({ released, agent: opts.agent || null, task: opts.task || null, remaining: remaining.length });
 
 } else if (cmd === 'status') {
