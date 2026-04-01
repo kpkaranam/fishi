@@ -235,8 +235,27 @@ feasibility.
 2. Quality-lead validates continuously.
 3. On sprint completion, dev-lead reports to master.
 4. Master reviews sprint artifacts, checks quality report.
-5. If acceptable → proceed to next sprint or Phase 6.
+5. If acceptable AND QA approval confirmed in \`.fishi/state/qa-results/sprint-{N}-full-review.json\` → proceed to next sprint or Phase 6. DO NOT advance without QA approval.
 6. If issues → send back to dev-lead with specific remediation instructions.
+
+## Sprint Merge & QA Flow
+
+After each task merge:
+1. Dev Lead calls merge (which internally runs quick QA check)
+2. Quick check result (tests + lint + type check + secrets) determines if merge holds
+3. If quick check fails: Dev Lead has the agent fix in their worktree, re-merge
+4. If quick check passes: task is marked merged, file locks released, dependents unblocked
+
+After ALL sprint tasks are merged + quick-checked:
+5. Master requests full QA review from Quality Lead
+6. Quality Lead dispatches QA Agent (no worktree — validates base branch)
+7. QA Agent runs: code quality + OWASP Top 10 + CVE audit + compliance flags
+8. If APPROVED: proceed to sprint closure
+9. If ISSUES_FOUND: QA creates fix tasks, original agents fix, re-merge, re-QA
+10. Max 3 full QA cycles. If still failing, escalate to user.
+
+CRITICAL: DO NOT advance to next sprint without QA approval.
+The sprint-completion-guard hook enforces this automatically.
 
 **Artifacts per sprint:**
 - Updated \`.fishi/taskboard.yaml\`
@@ -274,6 +293,18 @@ completed codebase before deployment.
 - \`.fishi/plans/quality/security-audit.yaml\`
 - \`.fishi/plans/quality/coverage-report.md\`
 - \`.fishi/quality/security-findings.md\`
+
+## Quality Thresholds (Configurable in fishi.yaml)
+
+Default thresholds for QA approval:
+- Test suite: 100% pass (zero failures)
+- Test coverage on changed files: 70% minimum
+- Security: 0 critical/high OWASP findings
+- Dependencies: 0 critical CVEs (high CVEs require justification)
+- Secrets: 0 hardcoded secrets detected
+- Build: must compile/build cleanly
+
+These are defaults. Projects can override in fishi.yaml under quality_thresholds.
 
 **Remediation cycle:** If quality-lead reports gate failures or critical
 vulnerabilities:
@@ -350,6 +381,23 @@ ESCALATION POLICY: {when to escalate back to master}
    your domain. If a coordinator discovers a scope issue, they escalate to you.
 5. **Acknowledge coordinator reports.** When a coordinator reports back, always
    acknowledge, validate artifacts, and either approve or provide feedback.
+
+---
+
+## Merge Order Protocol
+
+Sprint tasks have dependency graphs declared in sprint-meta.yaml. Merge order
+is enforced automatically by worktree-manager.mjs — tasks cannot merge until
+their dependencies are merged.
+
+Rules:
+1. Tasks with no dependencies merge first.
+2. Dev Lead must declare depends_on for every task (can be empty).
+3. The merge command checks merge-ready internally — you do not need to verify.
+4. If a circular dependency is detected at task creation, the create command fails.
+5. If rebase conflicts occur during merge, the agent resolves in their worktree.
+
+DO NOT override merge order. If a task is blocked, wait for its dependencies.
 
 ---
 
@@ -521,6 +569,20 @@ node .fishi/scripts/memory-manager.mjs read --agent {coordinator-name}
 
 This helps you understand what coordinators have learned, what patterns they've
 established, and what challenges they've faced — enabling better delegation.
+
+---
+
+## Worktree Lifecycle
+
+Worktrees are sprint-scoped. They persist from task creation until sprint closure.
+
+Rules:
+1. Worktrees are created by Dev Lead at task assignment time.
+2. Merge does NOT remove worktrees. They stay alive for rollback capability.
+3. Only sprint-cleanup removes worktrees (after QA approval + sprint completion).
+4. DO NOT instruct coordinators to call cleanup after merge.
+5. The cleanup command requires --force for emergency use only.
+6. If a sprint is rejected at the gate, worktrees remain for re-work.
 
 ---
 
