@@ -364,6 +364,27 @@ describe('E2E Pipeline Tests', () => {
       // Cleanup
       runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-remerge-test', '--force']);
     });
+
+    it('create with circular dependency fails', { timeout: 30000 }, () => {
+      // Create task A depending on B
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'cyc-a', '--coordinator', 'dev-lead', '--depends-on', 'cyc-b']);
+      // Create task B depending on A — should fail with circular dependency error
+      expect(() => {
+        runJSON('worktree-manager.mjs', ['create', '--agent', 'frontend-agent', '--task', 'cyc-b', '--coordinator', 'dev-lead', '--depends-on', 'cyc-a']);
+      }).toThrow();
+      // Cleanup cyc-a directly (skip merge — cyc-a depends on non-existent cyc-b)
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-cyc-a', '--force']);
+    });
+
+    it('two creates for same branch name fails', { timeout: 15000 }, () => {
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'dup-task', '--coordinator', 'dev-lead']);
+      expect(() => {
+        runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'dup-task', '--coordinator', 'dev-lead']);
+      }).toThrow();
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dup-task']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dup-task', '--force']);
+    });
   });
 
   // ── GROUP 5: Todo Manager ─────────────────────────────────────────
