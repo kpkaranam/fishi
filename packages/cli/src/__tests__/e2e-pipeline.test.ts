@@ -260,7 +260,7 @@ describe('E2E Pipeline Tests', () => {
     });
 
     it('cleanup removes worktree after merge', () => {
-      const result = runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-auth']);
+      const result = runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-auth', '--force']);
       expect(result.status).toBe('cleaned');
     });
 
@@ -279,7 +279,7 @@ describe('E2E Pipeline Tests', () => {
       expect(result.scope).toBe('src/auth,src/components');
       // Cleanup
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-frontend-agent-ui-auth']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-frontend-agent-ui-auth']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-frontend-agent-ui-auth', '--force']);
     });
 
     it('create without --scope works (backward compat)', { timeout: 15000 }, () => {
@@ -291,7 +291,7 @@ describe('E2E Pipeline Tests', () => {
       expect(result.depends_on).toBeUndefined();
       // Cleanup
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-api-v2']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-v2']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-v2', '--force']);
     });
 
     it('create with --depends-on stores dependency', { timeout: 30000 }, () => {
@@ -309,11 +309,11 @@ describe('E2E Pipeline Tests', () => {
       expect(metaContent).toContain('id: api-routes');
       expect(metaContent).toContain('depends_on: [models]');
 
-      // Cleanup both worktrees
-      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-api-routes']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-routes']);
+      // Cleanup both worktrees (merge dependency first, then dependent)
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-models']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-models']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-api-routes']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-api-routes', '--force']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-models', '--force']);
     });
 
     it('merge-ready returns true for task with no deps', { timeout: 15000 }, () => {
@@ -323,7 +323,7 @@ describe('E2E Pipeline Tests', () => {
       expect(result.ready).toBe(true);
       // Cleanup
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-no-deps-task']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-no-deps-task']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-no-deps-task', '--force']);
     });
 
     it('merge-ready returns false for task with unmet deps', { timeout: 30000 }, () => {
@@ -335,11 +335,34 @@ describe('E2E Pipeline Tests', () => {
       const result = runJSON('worktree-manager.mjs', ['merge-ready', '--worktree', 'agent-backend-agent-dep-child']);
       expect(result.ready).toBe(false);
       expect(result.blocked_by).toContain('dep-base');
-      // Cleanup
-      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dep-child']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-child']);
+      // Cleanup (merge dependency first, then dependent)
       runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dep-base']);
-      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-base']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-dep-child']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-child', '--force']);
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-dep-base', '--force']);
+    });
+
+    it('cleanup without --force is refused', { timeout: 15000 }, () => {
+      // Create a worktree, merge it, try cleanup without --force — should fail
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'force-test', '--scope', 'src/forcetest']);
+      runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-force-test']);
+      const { exitCode, stdout } = runExpectFail('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-force-test']);
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain('sprint-cleanup');
+      expect(stdout).toContain('--force');
+      // Actual cleanup
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-force-test', '--force']);
+    });
+
+    it('re-merge of already-merged task returns already-merged', { timeout: 15000 }, () => {
+      // Create a worktree, merge it, then merge again — should return status: already-merged
+      runJSON('worktree-manager.mjs', ['create', '--agent', 'backend-agent', '--task', 'remerge-test', '--scope', 'src/remerge']);
+      const first = runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-remerge-test']);
+      expect(['success', 'already-merged']).toContain(first.status);
+      const second = runJSON('worktree-manager.mjs', ['merge', '--worktree', 'agent-backend-agent-remerge-test']);
+      expect(second.status).toBe('already-merged');
+      // Cleanup
+      runJSON('worktree-manager.mjs', ['cleanup', '--worktree', 'agent-backend-agent-remerge-test', '--force']);
     });
   });
 

@@ -477,6 +477,130 @@ function cmdRebase() {
   });
 }
 
+function runQuickCheckInline(taskId) {
+  const checks = {};
+
+  // ── 1. Test runner detection (first match wins) ──
+  try {
+    let testCmd = null;
+    if (existsSync(join(ROOT, 'package.json'))) {
+      try {
+        const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'));
+        if (pkg.scripts && pkg.scripts.test) testCmd = 'npm test';
+      } catch {}
+    }
+    if (!testCmd) {
+      const vitestGlobs = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mts', 'vitest.config.mjs'];
+      if (vitestGlobs.some(f => existsSync(join(ROOT, f)))) testCmd = 'npx vitest run';
+    }
+    if (!testCmd) {
+      const jestGlobs = ['jest.config.ts', 'jest.config.js', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.json'];
+      if (jestGlobs.some(f => existsSync(join(ROOT, f)))) testCmd = 'npx jest';
+    }
+    if (!testCmd) {
+      if (existsSync(join(ROOT, 'pytest.ini'))) {
+        testCmd = 'pytest';
+      } else if (existsSync(join(ROOT, 'pyproject.toml'))) {
+        try {
+          const pyproject = readFileSync(join(ROOT, 'pyproject.toml'), 'utf-8');
+          if (pyproject.includes('[tool.pytest]')) testCmd = 'pytest';
+        } catch {}
+      }
+    }
+
+    if (!testCmd) {
+      checks.tests = { status: 'skipped', output: 'No test runner detected' };
+    } else {
+      try {
+        const output = run(testCmd);
+        checks.tests = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.tests = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    }
+  } catch {
+    checks.tests = { status: 'skipped', output: 'Error during test detection' };
+  }
+
+  // ── 2. Linter detection ──
+  try {
+    let lintCmd = null;
+    const eslintConfigs = ['.eslintrc', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml',
+      'eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', 'eslint.config.ts'];
+    if (eslintConfigs.some(f => existsSync(join(ROOT, f)))) lintCmd = 'npx eslint .';
+    if (!lintCmd && existsSync(join(ROOT, 'ruff.toml'))) lintCmd = 'ruff check .';
+
+    if (!lintCmd) {
+      checks.lint = { status: 'skipped', output: 'No linter detected' };
+    } else {
+      try {
+        const output = run(lintCmd);
+        checks.lint = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.lint = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    }
+  } catch {
+    checks.lint = { status: 'skipped', output: 'Error during linter detection' };
+  }
+
+  // ── 3. Type checker ──
+  try {
+    if (existsSync(join(ROOT, 'tsconfig.json'))) {
+      try {
+        const output = run('npx tsc --noEmit');
+        checks.typecheck = { status: 'passed', output: output.slice(0, 500) };
+      } catch (err) {
+        checks.typecheck = { status: 'failed', output: (err.stdout || err.stderr || err.message || '').slice(0, 500) };
+      }
+    } else {
+      checks.typecheck = { status: 'skipped', output: 'No tsconfig.json found' };
+    }
+  } catch {
+    checks.typecheck = { status: 'skipped', output: 'Error during typecheck detection' };
+  }
+
+  // ── 4. Secret scan on diff ──
+  try {
+    let diff = '';
+    try { diff = run('git diff HEAD~1'); } catch { diff = ''; }
+
+    const secretPatterns = [
+      /(?:api[_-]?key|secret|token|password|credential)\\s*[:=]\\s*['"][A-Za-z0-9+\\/=]{16,}['"]/i,
+      /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/,
+      /(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}/,
+      /(?:sk-|pk_live_|sk_live_)[A-Za-z0-9]{20,}/,
+    ];
+
+    const matches = [];
+    for (const pattern of secretPatterns) {
+      const m = diff.match(pattern);
+      if (m) matches.push(m[0].slice(0, 100));
+    }
+
+    checks.secrets = matches.length > 0
+      ? { status: 'failed', matches }
+      : { status: 'passed', matches: [] };
+  } catch {
+    checks.secrets = { status: 'passed', matches: [] };
+  }
+
+  const overallResult = Object.values(checks).some(c => c.status === 'failed') ? 'failed' : 'passed';
+
+  const resultObj = {
+    task_id: taskId,
+    timestamp: new Date().toISOString(),
+    result: overallResult,
+    checks,
+  };
+
+  const qaDir = join(ROOT, '.fishi', 'state', 'qa-results');
+  if (!existsSync(qaDir)) mkdirSync(qaDir, { recursive: true });
+  writeFileSync(join(qaDir, \`\${taskId}-quick.json\`), JSON.stringify(resultObj, null, 2), 'utf-8');
+
+  return resultObj;
+}
+
 function cmdMerge() {
   const worktreeName = flag('worktree');
   if (!worktreeName) fail('Usage: worktree-manager.mjs merge --worktree <name>');
@@ -486,7 +610,42 @@ function cmdMerge() {
   try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
   catch { fail(\`Could not determine branch for worktree: \${treePath}\`); }
 
+  // ── Sprint-meta pre-checks (idempotency + merge-ready) ──
+  let meta = null;
+  let task = null;
+  let hasSprintMeta = existsSync(SPRINT_META_PATH);
+
+  if (hasSprintMeta) {
+    meta = readSprintMeta();
+    task = meta.tasks.find(t => t.worktree === worktreeName || t.id === worktreeName);
+  }
+
+  // Idempotency: if already marked merged in sprint-meta, return immediately
+  if (task && task.merge_status === 'merged') {
+    out({ merged: branch, into: getBaseBranch(), status: 'already-merged' });
+    return;
+  }
+
+  // Merge-ready: check all depends_on have merge_status: merged
+  if (task && task.depends_on && task.depends_on.length > 0) {
+    const blockedBy = [];
+    for (const depId of task.depends_on) {
+      const dep = meta.tasks.find(t => t.id === depId);
+      if (!dep || dep.merge_status !== 'merged') {
+        blockedBy.push(depId);
+      }
+    }
+    if (blockedBy.length > 0) {
+      fail(\`Cannot merge: dependencies not yet merged. blocked_by: [\${blockedBy.join(', ')}]\`);
+    }
+  }
+
   if (isBranchMerged(branch)) {
+    // Git says already merged — update sprint-meta if present
+    if (task && meta) {
+      task.merge_status = 'merged';
+      writeSprintMeta(meta);
+    }
     out({ merged: branch, into: getBaseBranch(), status: 'already-merged' });
     return;
   }
@@ -514,21 +673,67 @@ function cmdMerge() {
     fail(\`Merge failed: \${err.message}. Main repo restored to \${targetBranch}.\`);
   }
 
+  // ── Post-merge: quick-check + sprint-meta update ──
+  let qaQuick = null;
+  if (task && meta) {
+    // Extract task ID from the worktree name or task record
+    const taskId = task.id;
+    const qcResult = runQuickCheckInline(taskId);
+    qaQuick = qcResult.result;
+
+    if (qaQuick === 'passed') {
+      task.merge_status = 'merged';
+      task.qa_quick = 'passed';
+      writeSprintMeta(meta);
+      // Release file locks
+      try {
+        const lockScript = join(ROOT, '.fishi', 'scripts', 'file-lock-hook.mjs');
+        if (existsSync(lockScript)) {
+          run(\`node \${lockScript} release --task \${taskId}\`);
+        }
+      } catch {}
+    } else {
+      task.qa_quick = 'failed';
+      task.qa_retries = (task.qa_retries || 0) + 1;
+      writeSprintMeta(meta);
+      // Escalation if retries >= 3
+      if (task.qa_retries >= 3) {
+        const escDir = join(ROOT, '.fishi', 'state', 'escalations');
+        if (!existsSync(escDir)) mkdirSync(escDir, { recursive: true });
+        writeFileSync(join(escDir, \`\${taskId}-qa-escalation.json\`), JSON.stringify({
+          task_id: taskId,
+          reason: 'qa_quick failed 3+ times',
+          retries: task.qa_retries,
+          timestamp: new Date().toISOString(),
+        }, null, 2), 'utf-8');
+      }
+    }
+  } else if (hasSprintMeta && meta && !task) {
+    // Task not tracked in sprint-meta — just update nothing (backward compat)
+  }
+
   // NOTE: Worktree is NOT removed after merge. It stays alive until sprint-cleanup.
   try { import(new URL('./monitor-emitter.mjs', import.meta.url).href).then(m => m.emitMonitorEvent(ROOT, { type: 'worktree.merged', agent: 'system', data: { branch } })).catch(() => {}); } catch {}
 
-  out({
+  const result = {
     merged: branch,
     into: targetBranch,
     status: 'success',
     worktree_preserved: true,
     note: 'Worktree kept alive — use sprint-cleanup after sprint completes',
-  });
+  };
+  if (qaQuick !== null) result.qa_quick = qaQuick;
+  out(result);
 }
 
 function cmdCleanup() {
+  // Worktrees persist until sprint-cleanup. Require --force for emergency cleanup.
+  if (!process.argv.includes('--force')) {
+    fail('Worktrees persist until sprint-cleanup. Use --force for emergency cleanup.');
+  }
+
   const worktreeName = flag('worktree');
-  if (!worktreeName) fail('Usage: worktree-manager.mjs cleanup --worktree <name>');
+  if (!worktreeName) fail('Usage: worktree-manager.mjs cleanup --worktree <name> --force');
 
   const treePath = join('.trees', worktreeName);
   const absTreePath = join(ROOT, treePath);
@@ -537,11 +742,7 @@ function cmdCleanup() {
   try { branch = run(\`git -C \${treePath} rev-parse --abbrev-ref HEAD\`); }
   catch { branch = null; }
 
-  // SAFETY: Refuse to cleanup unmerged branches unless --force
   if (branch && branch !== 'HEAD' && !isBranchMerged(branch)) {
-    if (!process.argv.includes('--force')) {
-      fail(\`Branch \${branch} has unmerged work. Merge first (worktree-manager.mjs merge --worktree \${worktreeName}) or use --force to delete.\`);
-    }
     process.stderr.write(\`WARNING: Force-deleting unmerged branch \${branch}\\n\`);
   }
 
@@ -876,7 +1077,7 @@ switch (command) {
         review: '--worktree <name> — diff stats for a worktree',
         rebase: '--worktree <name> — rebase worktree branch onto latest base branch',
         merge: '--worktree <name> — rebase + merge to base branch (keeps worktree alive)',
-        cleanup: '--worktree <name> — remove worktree (refuses if unmerged unless --force)',
+        cleanup: '--worktree <name> --force — remove worktree (always requires --force)',
         'sprint-cleanup': '--sprint <N> — batch cleanup all merged worktrees after sprint completion',
         'merge-ready': '--worktree <name> — check if all dependency tasks are merged before allowing merge',
         'quick-check': '--task <task-id> [--diff-content <text>] — run automated post-merge validation (tests, lint, typecheck, secret scan)',
