@@ -1,14 +1,16 @@
 /**
  * Sprint Completion Guard Hook Template
  *
- * PreToolUse hook on Agent dispatches that prevents starting Sprint N+1
- * without completing Sprint N tracking (sprint file, tasks, board, epics).
+ * STATE-BASED PreToolUse hook that blocks code-writing agent dispatches
+ * unless QA has approved all completed sprints. Does NOT rely on parsing
+ * sprint numbers from prompts — instead checks actual project state.
  */
 export function getSprintCompletionGuardHook(): string {
   return `#!/usr/bin/env node
 // sprint-completion-guard.mjs — FISHI Sprint Completion Guard
-// Prevents dispatching new sprint work if current sprint isn't properly closed.
-// Checks: sprint file marked COMPLETED, all tasks [x], board updated, epics updated.
+// STATE-BASED enforcement: checks if QA has approved all completed sprints
+// before allowing ANY code-writing agent dispatch.
+// Does NOT rely on parsing sprint numbers from prompts.
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -16,42 +18,38 @@ import { execSync } from 'child_process';
 
 const ROOT = process.env.FISHI_PROJECT_ROOT || process.cwd();
 
-// Read tool input from stdin
-let input = '';
-try {
-  input = readFileSync(0, 'utf-8').trim();
-} catch {
-  process.exit(0);
-}
+// ── Only fire on Agent tool dispatches for code-writing agents ──────
+const CODE_AGENTS = ['backend-agent', 'frontend-agent', 'fullstack-agent', 'testing-agent', 'devops-agent'];
 
-// Only check on Agent dispatches
+let input = '';
+try { input = readFileSync(0, 'utf-8').trim(); } catch { process.exit(0); }
+
 let toolName = '';
-let prompt = '';
+let agentType = '';
 try {
   const parsed = JSON.parse(input);
   toolName = parsed.tool_name || '';
   const ti = parsed.tool_input || parsed;
-  prompt = (ti.prompt || '').toLowerCase();
-} catch {
-  process.exit(0);
-}
+  agentType = ti.subagent_type || ti.agent_type || '';
+} catch { process.exit(0); }
 
-if (toolName !== 'Agent') {
-  process.exit(0);
-}
+if (toolName !== 'Agent') process.exit(0);
+if (!CODE_AGENTS.includes(agentType)) process.exit(0);
 
-// Only enforce if prompt mentions a sprint number
-const sprintMatch = prompt.match(/sprint\\s+(\\d+)/i);
-if (!sprintMatch) {
-  process.exit(0); // Not sprint-related — allow
-}
+// ── Only enforce during development phase ───────────────────────────
+const stateFile = join(ROOT, '.fishi', 'state', 'project.yaml');
+if (!existsSync(stateFile)) process.exit(0);
 
-const requestedSprint = parseInt(sprintMatch[1], 10);
-if (requestedSprint <= 1) {
-  process.exit(0); // Sprint 1 has no predecessor to check
-}
+let phase = 'init';
+try {
+  const content = readFileSync(stateFile, 'utf-8');
+  const m = content.match(/^phase:\\s*(.+)$/m);
+  if (m) phase = m[1].trim();
+} catch {}
 
-// Auto-sync sprint-meta with git state before checking
+if (phase !== 'development' && phase !== 'qa_security') process.exit(0);
+
+// ── Auto-sync sprint-meta with git state ────────────────────────────
 try {
   const wmScript = join(ROOT, '.fishi', 'scripts', 'worktree-manager.mjs');
   if (existsSync(wmScript)) {
@@ -61,82 +59,75 @@ try {
   }
 } catch {}
 
-// Check if previous sprint is properly closed
-const prevSprint = requestedSprint - 1;
+// ── Detect completed sprints that need QA approval ──────────────────
 const sprintsDir = join(ROOT, '.fishi', 'taskboard', 'sprints');
-const issues = [];
+if (!existsSync(sprintsDir)) process.exit(0);
 
-if (!existsSync(sprintsDir)) {
-  process.exit(0); // No sprints dir — skip check
-}
+const sprintFiles = readdirSync(sprintsDir)
+  .filter(f => /sprint-\\d+\\.md$/i.test(f))
+  .sort();
 
-// Check 1: Previous sprint file exists and is marked complete
-const sprintFiles = existsSync(sprintsDir) ? readdirSync(sprintsDir).filter(f => f.includes(\`sprint-\${prevSprint}\`) || f.includes(\`sprint-0\${prevSprint}\`)) : [];
-if (sprintFiles.length === 0) {
-  issues.push(\`Sprint \${prevSprint} file not found in \${sprintsDir}\`);
-} else {
-  const sprintContent = readFileSync(join(sprintsDir, sprintFiles[0]), 'utf-8');
+if (sprintFiles.length === 0) process.exit(0);
 
-  // Check if marked as completed
-  if (!sprintContent.toLowerCase().includes('completed') && !sprintContent.toLowerCase().includes('done') && !sprintContent.toLowerCase().includes('closed')) {
-    issues.push(\`Sprint \${prevSprint} file not marked as COMPLETED/DONE\`);
-  }
-
-  // Check 2: All tasks are checked off
-  const unchecked = (sprintContent.match(/^\\s*-\\s*\\[\\s*\\]/gm) || []).length;
-  if (unchecked > 0) {
-    issues.push(\`Sprint \${prevSprint} has \${unchecked} unchecked tasks\`);
-  }
-}
-
-// Check 3: Board file has tasks in Done column
+// Read board.md Done section
 const boardPath = join(ROOT, '.fishi', 'taskboard', 'board.md');
+let doneSection = '';
 if (existsSync(boardPath)) {
   const board = readFileSync(boardPath, 'utf-8');
-  const doneSection = board.split(/^## Done/m)[1];
-  if (!doneSection || !doneSection.includes('[x]')) {
-    issues.push('Board has no completed tasks in Done column');
-  }
+  doneSection = board.split(/^## Done/m)[1] || '';
 }
 
-// Check 4: No active agent worktrees remaining
-try {
-  const worktreeList = execSync('git worktree list --porcelain', { cwd: ROOT, encoding: 'utf-8' });
-  const activeAgentWorktrees = worktreeList.split('\\n').filter(l => l.startsWith('branch refs/heads/agent/')).length;
-  if (activeAgentWorktrees > 0) {
-    issues.push(\`\${activeAgentWorktrees} agent worktree(s) still active. Run: node .fishi/scripts/worktree-manager.mjs sprint-cleanup --sprint \${prevSprint}\`);
-  }
-} catch {}
+const issues = [];
+let lastUnapprovedSprint = null;
 
-// Check 5: QA approval required
-const qaResultPath = join(ROOT, '.fishi', 'state', 'qa-results', \`sprint-\${prevSprint}-full-review.json\`);
-if (existsSync(qaResultPath)) {
-  try {
-    const qaResult = JSON.parse(readFileSync(qaResultPath, 'utf-8'));
-    if (qaResult.result !== 'APPROVED') {
-      issues.push(\`Sprint \${prevSprint} QA review not approved (result: \${qaResult.result}). Run full QA review before starting Sprint \${requestedSprint}.\`);
+for (const sf of sprintFiles) {
+  const sprintContent = readFileSync(join(sprintsDir, sf), 'utf-8');
+  const numMatch = sf.match(/sprint-0*(\\d+)/);
+  if (!numMatch) continue;
+  const sprintNum = parseInt(numMatch[1], 10);
+
+  // Extract TASK-NNN IDs from this sprint file
+  const taskIds = [];
+  const taskMatches = sprintContent.matchAll(/TASK-(\\d+)/g);
+  for (const tm of taskMatches) taskIds.push('TASK-' + tm[1]);
+  if (taskIds.length === 0) continue;
+
+  // Check if ALL tasks from this sprint are in board.md Done section
+  const allDone = taskIds.every(tid => doneSection.includes(tid));
+  if (!allDone) continue; // Sprint still in progress — skip
+
+  // Sprint is complete (all tasks in Done). Check QA approval.
+  const qaPath = join(ROOT, '.fishi', 'state', 'qa-results', \`sprint-\${sprintNum}-full-review.json\`);
+  if (existsSync(qaPath)) {
+    try {
+      const qa = JSON.parse(readFileSync(qaPath, 'utf-8'));
+      if (qa.result === 'APPROVED') continue; // QA approved — good
+      issues.push(\`Sprint \${sprintNum} QA result: \${qa.result}. Must be APPROVED.\`);
+    } catch {
+      issues.push(\`Sprint \${sprintNum} QA result file corrupted.\`);
     }
-  } catch {
-    issues.push(\`Sprint \${prevSprint} QA result file is corrupted. Re-run QA review.\`);
+  } else {
+    lastUnapprovedSprint = sprintNum;
+    issues.push(\`Sprint \${sprintNum} — all tasks Done but QA review not run. Quality Lead must dispatch QA Agent.\`);
   }
-} else {
-  issues.push(\`Sprint \${prevSprint} QA review not found. Run full QA review before starting Sprint \${requestedSprint}.\`);
 }
 
 if (issues.length > 0) {
-  console.error(\`[FISHI SPRINT GUARD] Cannot start Sprint \${requestedSprint} — Sprint \${prevSprint} tracking incomplete:\`);
+  process.stderr.write('[FISHI SPRINT GUARD] BLOCKED — QA review required:\\n');
   for (const issue of issues) {
-    console.error(\`  - \${issue}\`);
+    process.stderr.write('  - ' + issue + '\\n');
   }
-  console.error('');
-  console.error('Complete the sprint tracking first:');
-  console.error(\`  1. Mark all tasks as [x] in .fishi/taskboard/sprints/sprint-\${prevSprint}.md\`);
-  console.error(\`  2. Move completed tasks to Done in .fishi/taskboard/board.md\`);
-  console.error(\`  3. Add "Status: COMPLETED" to the sprint file\`);
-  process.exit(2); // Block
+  process.stderr.write('\\nTo resolve:\\n');
+  process.stderr.write('  1. Quality Lead dispatches QA Agent for sprint review\\n');
+  process.stderr.write('  2. QA Agent writes: .fishi/state/qa-results/sprint-{N}-full-review.json\\n');
+  process.stderr.write('  3. File must contain: { "result": "APPROVED" }\\n');
+  if (lastUnapprovedSprint) {
+    process.stderr.write('\\n  Quick manual approve (testing only):\\n');
+    process.stderr.write(\`  echo '{"sprint":\${lastUnapprovedSprint},"result":"APPROVED"}' > .fishi/state/qa-results/sprint-\${lastUnapprovedSprint}-full-review.json\\n\`);
+  }
+  process.exit(2); // BLOCK
 }
 
-console.log(\`[FISHI] Sprint \${prevSprint} tracking verified — Sprint \${requestedSprint} can proceed\`);
 process.exit(0);
 `;
 }
