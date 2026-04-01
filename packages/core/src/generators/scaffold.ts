@@ -435,6 +435,7 @@ export async function generateScaffold(
     autoStart: false,
     lastStarted: null,
   }, null, 2) + '\n');
+  await write('.fishi/state/qa-results/.gitkeep', '');
   await write('.fishi/mcp-registry.yaml', getMcpRegistryTemplate());
   await write('.fishi/model-routing.md', getModelRoutingReference());
 
@@ -454,6 +455,7 @@ export async function generateScaffold(
   // ── TaskBoard ─────────────────────────────────────────────────────
   await write('.fishi/taskboard/board.md', getEmptyBoard());
   await write('.fishi/taskboard/backlog.md', getEmptyBacklog());
+  await write('.fishi/taskboard/sprint-meta.yaml', 'sprint: 0\nqa_full_retries: 0\ntasks: []\n');
 
   // ── .gitignore additions ──────────────────────────────────────────
   const gitignorePath = join(targetDir, '.gitignore');
