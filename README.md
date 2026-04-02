@@ -15,7 +15,7 @@
   <a href="https://github.com/kpkaranam/fishi"><img src="https://img.shields.io/github/stars/kpkaranam/fishi?style=flat-square&color=yellow" alt="stars"></a>
   <a href="https://github.com/kpkaranam/fishi/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/agents-22+-purple?style=flat-square" alt="22+ agents">
-  <img src="https://img.shields.io/badge/tests-629-brightgreen?style=flat-square" alt="629 tests">
+  <img src="https://img.shields.io/badge/tests-743-brightgreen?style=flat-square" alt="629 tests">
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square" alt="Node.js 18+">
 </p>
 
@@ -26,7 +26,7 @@
   <a href="#what-you-get">What You Get</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
   <a href="#fishi-vs-going-bare">FISHI vs Going Bare</a> &bull;
-  <a href="#available-patterns-55">Patterns</a> &bull;
+  <a href="#available-patterns-60">Patterns</a> &bull;
   <a href="#the-full-framework">Full Framework</a> &bull;
   <a href="#contributing">Contributing</a>
 </p>
@@ -105,7 +105,7 @@ claude install fishi-governance
 
 ### Pattern Marketplace
 
-**55 blueprints via MCP. Grab-and-go integrations.**
+**60 blueprints via MCP. Grab-and-go integrations.**
 
 - Stripe, Auth0, SendGrid, Prisma, PostHog, and 50 more
 - Agent pulls the blueprint, implements correctly in minutes
@@ -150,7 +150,7 @@ Each component works independently. Use one, two, or all three.
 │   │   Governance     │  │  Pattern MCP     │  │ Full FISHI   │  │
 │   │   Plugin         │  │  Server          │  │ Framework    │  │
 │   │                  │  │                  │  │              │  │
-│   │  • Safety hooks  │  │  • 55 blueprints │  │  • 9 phases  │  │
+│   │  • Safety hooks  │  │  • 60 blueprints │  │  • 9 phases  │  │
 │   │  • Audit trail   │  │  • Search/select │  │  • 22+ agents│  │
 │   │  • Block/allow   │  │  • MCP protocol  │  │  • 7 gates   │  │
 │   │                  │  │                  │  │  • TaskBoard  │  │
@@ -181,7 +181,7 @@ What happens when AI agents operate without governance?
 
 ---
 
-## Available Patterns (55)
+## Available Patterns (60)
 
 | Category | Patterns |
 |----------|---------|

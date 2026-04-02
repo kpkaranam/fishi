@@ -1,8 +1,8 @@
 # @qlucent/fishi-patterns
 
-**Integration pattern marketplace for Claude Code** — 55 battle-tested blueprints via MCP server.
+**Integration pattern marketplace for Claude Code** — 60 battle-tested blueprints via MCP server.
 
-Stripe, Auth0, SendGrid, PostHog, Prisma, and 50 more. Search, select, and inject into your agent's context.
+Stripe, Auth0, SendGrid, PostHog, Prisma, and 55 more. Search, select, and inject into your agent's context.
 
 ## Why?
 
@@ -49,7 +49,7 @@ Add this to your Claude Code settings under `mcpServers`:
 # "Find an auth integration for Next.js"
 ```
 
-## Available Patterns (55)
+## Available Patterns (60)
 
 | Category | Patterns |
 |----------|---------|

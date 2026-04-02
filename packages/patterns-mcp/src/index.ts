@@ -2,7 +2,7 @@
 /**
  * @qlucent/fishi-patterns — MCP server for integration pattern blueprints
  *
- * Serves 55 battle-tested integration blueprints via MCP protocol (stdio).
+ * Serves 60 battle-tested integration blueprints via MCP protocol (stdio).
  * Tools: search, info, select, list_categories, contribute_template
  */
 

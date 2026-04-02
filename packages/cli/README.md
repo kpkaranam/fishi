@@ -896,7 +896,7 @@ Previously, FISHI's pipeline features existed as templates and scripts but nothi
 <details>
 <summary><b>v0.13.0</b> — Pattern Marketplace</summary>
 
-- **55 integration blueprints** across 21 categories
+- **60 integration blueprints** across 21 categories
 - Categories: Auth, Payments, Email, Analytics, Database, Storage, Search, Vector DB, Monitoring, CI/CD, Real-time, PM, Communication, E-commerce, Design, Support, Crawler, Scraping, Hosting, Domain, Cloud
 - `fishi patterns list|search|info|select|selected` commands
 - Architecture guides with Setup, Patterns, Pitfalls per integration
