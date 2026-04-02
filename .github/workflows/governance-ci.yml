@@ -1,0 +1,104 @@
+name: Governance Plugin CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/governance/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'packages/governance/**'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npx tsc --noEmit -p packages/governance/tsconfig.json
+
+      - name: Test
+        run: npx vitest run packages/governance/
+
+      - name: Build
+        run: npm run build -w packages/governance
+
+      - name: Verify zero dependencies
+        run: |
+          node -e "
+            const pkg = require('./packages/governance/package.json');
+            if (pkg.dependencies && Object.keys(pkg.dependencies).length > 0) {
+              console.error('FAIL: governance must have zero runtime dependencies');
+              console.error('Found:', JSON.stringify(pkg.dependencies));
+              process.exit(1);
+            }
+            console.log('PASS: zero runtime dependencies');
+          "
+
+      - name: Verify no credentials in scripts
+        run: |
+          if grep -rn "sk-\|sk_live\|pk_live\|AKIA\|password\s*=" packages/governance/scripts/; then
+            echo "FAIL: credentials found in scripts"
+            exit 1
+          fi
+          echo "PASS: no credentials in scripts"
+
+      - name: Hook script smoke test
+        run: |
+          echo '{"input":{"command":"git status"}}' | node packages/governance/scripts/safety-check.mjs
+          echo "PASS: safe command allowed (exit 0)"
+
+      - name: Block test
+        run: |
+          echo '{"input":{"command":"rm -rf /"}}' | node packages/governance/scripts/safety-check.mjs && echo "FAIL: should have blocked" && exit 1 || echo "PASS: destructive command blocked (exit 2)"
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build -w packages/governance
+
+      - name: Publish (if version changed)
+        run: |
+          cd packages/governance
+          CURRENT=$(npm view fishi-governance version 2>/dev/null || echo "0.0.0")
+          LOCAL=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "$LOCAL" ]; then
+            npm publish --access public
+          else
+            echo "Version $LOCAL already published, skipping"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

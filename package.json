@@ -4,7 +4,9 @@
   "workspaces": [
     "packages/core",
     "packages/cli",
-    "packages/plugin"
+    "packages/plugin",
+    "packages/governance",
+    "packages/patterns-mcp"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

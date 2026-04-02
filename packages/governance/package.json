@@ -1,0 +1,39 @@
+{
+  "name": "fishi-governance",
+  "version": "0.1.0",
+  "description": "Governance plugin for Claude Code — blocks destructive agent operations and logs an audit trail. Works with any framework.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "claude-code",
+    "governance",
+    "safety",
+    "audit-trail",
+    "destructive-protection",
+    "ai-agent-safety"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kpkaranam/fishi"
+  },
+  "homepage": "https://github.com/kpkaranam/fishi#fishi-governance",
+  "files": [
+    "scripts",
+    ".claude-plugin",
+    "hooks.json",
+    "README.md"
+  ]
+}

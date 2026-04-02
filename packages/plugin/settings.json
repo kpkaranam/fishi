@@ -87,8 +87,7 @@
       "Bash(eslint *)",
       "Bash(prettier *)",
       "Bash(docker *)",
-      "Bash(docker-compose *)",
-      "Bash(*)"
+      "Bash(docker-compose *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -96,6 +95,9 @@
       "Bash(rm -rf ~)",
       "Bash(rm -rf ~/*)",
       "Bash(rm -rf .)",
+      "Bash(rm -rf ./*)",
+      "Bash(rm -rf ..)",
+      "Bash(rm -rf ../*)",
       "Bash(chmod 777 *)",
       "Bash(chmod -R 777 *)",
       "Bash(sudo *)",
@@ -114,7 +116,14 @@
       "Bash(nmap *)",
       "Bash(netcat *)",
       "Bash(nc -l *)",
-      "Bash(:(){ :|:& };:)"
+      "Bash(:(){ :|:& };:)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fd *)",
+      "Bash(git checkout -- .)",
+      "Bash(> .env*)",
+      "Bash(kill -9 *)"
     ]
   }
 }

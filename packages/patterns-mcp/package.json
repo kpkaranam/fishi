@@ -1,0 +1,54 @@
+{
+  "name": "@qlucent/fishi-patterns",
+  "version": "0.1.0",
+  "description": "Integration pattern marketplace for Claude Code — 55 battle-tested blueprints via MCP server. Stripe, Auth0, SendGrid, and more.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "fishi-patterns": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "test": "vitest run",
+    "clean": "rm -rf dist",
+    "extract-blueprints": "node scripts/extract-blueprints.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@qlucent/fishi-core": "*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "patterns",
+    "integration",
+    "blueprints",
+    "stripe",
+    "auth0",
+    "sendgrid",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kpkaranam/fishi"
+  },
+  "homepage": "https://github.com/kpkaranam/fishi#fishi-patterns",
+  "files": [
+    "dist",
+    "blueprints",
+    "CONTRIBUTING.md",
+    "PATTERN-TEMPLATE.md",
+    "README.md"
+  ]
+}

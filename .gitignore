@@ -1,13 +1,35 @@
 node_modules/
 dist/
 .trees/
-.fishi/logs/
 *.tsbuildinfo
 .env
 .env.local
 coverage/
 .DS_Store
 Thumbs.db
+
+# Claude Code local config
 .claude/settings.local.json
+.claude/skills/
+
+# FISHI runtime state
+.fishi/
+packages/cli/.fishi/
+
+# BMad tooling (local installation, not project code)
+_bmad/
+_bmad-output/
+
+# Internal docs, strategy, planning (never push)
 internal-docs/
 docs/
+FISHI-Strategic-Review.md
+CODEBASE-DNA.md
+SOUL.md
+AGENTS.md
+
+# Test artifacts
+test-landing-page.html
+*.jpg
+*.png
+*.jpeg

@@ -1,0 +1,114 @@
+name: Pattern MCP CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/patterns-mcp/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'packages/patterns-mcp/**'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build core (dependency)
+        run: npm run build -w packages/core
+
+      - name: Lint
+        run: npx tsc --noEmit -p packages/patterns-mcp/tsconfig.json
+
+      - name: Test
+        run: npx vitest run packages/patterns-mcp/
+
+      - name: Build
+        run: npm run build -w packages/patterns-mcp
+
+      - name: Verify no credentials in blueprints
+        run: |
+          if grep -rn "sk-\|sk_live\|pk_live\|AKIA\|password\s*=" packages/patterns-mcp/blueprints/; then
+            echo "FAIL: credentials found in blueprints"
+            exit 1
+          fi
+          echo "PASS: no credentials in blueprints"
+
+      - name: Verify all blueprints have frontmatter
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            function walk(dir) {
+              const files = [];
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                if (entry.isDirectory()) files.push(...walk(path.join(dir, entry.name)));
+                else if (entry.name.endsWith('.md')) files.push(path.join(dir, entry.name));
+              }
+              return files;
+            }
+            const blueprints = walk('packages/patterns-mcp/blueprints');
+            let failures = 0;
+            for (const file of blueprints) {
+              const content = fs.readFileSync(file, 'utf-8');
+              if (!content.startsWith('---')) { console.error('FAIL: Missing frontmatter:', file); failures++; }
+              if (!content.includes('id:')) { console.error('FAIL: Missing id:', file); failures++; }
+              if (!content.includes('category:')) { console.error('FAIL: Missing category:', file); failures++; }
+            }
+            if (failures > 0) process.exit(1);
+            console.log('PASS:', blueprints.length, 'blueprints validated');
+          "
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build core
+        run: npm run build -w packages/core
+
+      - name: Build patterns-mcp
+        run: npm run build -w packages/patterns-mcp
+
+      - name: Publish (if version changed)
+        run: |
+          cd packages/patterns-mcp
+          CURRENT=$(npm view @qlucent/fishi-patterns version 2>/dev/null || echo "0.0.0")
+          LOCAL=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "$LOCAL" ]; then
+            npm publish --access public
+          else
+            echo "Version $LOCAL already published, skipping"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

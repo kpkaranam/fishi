@@ -1,0 +1,20 @@
+{
+  "name": "fishi-governance",
+  "description": "Governance for Claude Code — blocks destructive agent operations, logs audit trails. Works alongside Ruflo, BMAD, Oh-My-ClaudeCode, or raw Claude Code.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Qlucent"
+  },
+  "homepage": "https://github.com/kpkaranam/fishi#fishi-governance",
+  "repository": "https://github.com/kpkaranam/fishi",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "governance",
+    "safety",
+    "audit-trail",
+    "destructive-protection",
+    "ai-agent-safety",
+    "production-grade"
+  ]
+}
