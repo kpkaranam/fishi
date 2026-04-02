@@ -1311,16 +1311,41 @@ function cmdSync() {
 
   if (synced > 0) {
     writeSprintMeta(meta);
-    // Also sync board.md — move any newly-detected merged tasks to Done
-    for (const task of meta.tasks) {
-      if (task.merge_status === 'merged') {
-        syncBoardTask(task.id, 'Done');
+  }
+
+  // ── Board.md sync: match merged agent branches to board tasks ──────
+  // This works independently of sprint-meta — looks at actual git branches
+  // and matches them to TASK-NNN entries in the board.
+  let boardSynced = 0;
+  if (existsSync(boardPath)) {
+    let board = readFileSync(boardPath, 'utf-8');
+    const doneSection = board.split(/^## Done/m)[1] || '';
+
+    // Find all TASK-NNN entries NOT in Done
+    const allTaskLines = board.matchAll(/^(\\s*-\\s*\\[[ ]\\]\\s*(TASK-\\d+).*)$/gm);
+    for (const m of allTaskLines) {
+      const taskLine = m[1];
+      const taskId = m[2]; // e.g., TASK-007
+      const taskNum = taskId.replace('TASK-', ''); // e.g., 007
+
+      // Check if any merged agent branch contains this task number
+      const branchMerged = mergedBranches.some(b => {
+        if (!b.startsWith('agent/')) return false;
+        // Match task-007, task-7, task007 patterns in branch name
+        return b.includes('task-' + taskNum) ||
+               b.includes('task-' + taskNum.replace(/^0+/, '')) ||
+               b.includes('task-' + parseInt(taskNum, 10));
+      });
+
+      if (branchMerged) {
+        syncBoardTask(taskId, 'Done');
+        boardSynced++;
       }
     }
   }
 
   const stillPending = meta.tasks.filter(t => t.merge_status !== 'merged').length;
-  out({ synced, still_pending: stillPending, tasks: meta.tasks.map(t => ({ id: t.id, agent: t.agent, merge_status: t.merge_status })) });
+  out({ synced, board_synced: boardSynced, still_pending: stillPending, tasks: meta.tasks.map(t => ({ id: t.id, agent: t.agent, merge_status: t.merge_status })) });
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────
