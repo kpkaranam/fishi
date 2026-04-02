@@ -49,7 +49,7 @@ Two steps. Two minutes. Zero config.
 
 ```bash
 # 1. Install the governance plugin
-claude install fishi-governance
+npm install -g @qlucent/fishi-governance
 
 # 2. Done. Destructive operations are now blocked. Audit trail is logging.
 ```
@@ -97,7 +97,7 @@ FISHI components are **additive, not competing**. They layer on top of whatever 
 - Override with explicit `--force` (logged)
 
 ```bash
-claude install fishi-governance
+npm install -g @qlucent/fishi-governance
 ```
 
 </td>

@@ -1,4 +1,4 @@
-# fishi-governance
+# @qlucent/fishi-governance
 
 **Governance plugin for Claude Code** — blocks destructive agent operations and logs an audit trail.
 
@@ -28,7 +28,7 @@ Agent: "Let me clean up the project..."
 
 ```bash
 # 1. Install the plugin
-claude install fishi-governance
+npm install -g @qlucent/fishi-governance
 
 # 2. That's it. Start a Claude Code session.
 # Destructive operations are now blocked. Audit trail is logging.

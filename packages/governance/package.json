@@ -1,6 +1,6 @@
 {
-  "name": "fishi-governance",
-  "version": "0.1.0",
+  "name": "@qlucent/fishi-governance",
+  "version": "0.1.1",
   "description": "Governance plugin for Claude Code — blocks destructive agent operations and logs an audit trail. Works with any framework.",
   "license": "MIT",
   "type": "module",
