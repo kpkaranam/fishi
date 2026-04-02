@@ -336,6 +336,12 @@ When reporting to Master Orchestrator, provide:
 - **Blockers**: anything that needs Master's attention or cross-domain resolution
 - **Recommendation**: what should happen next (e.g., "3/5 sprint tasks complete, on track for sprint deadline")
 
+**Sprint completion report** — when ALL tasks in a sprint are Done, you MUST:
+1. Run: \\\`node .fishi/scripts/worktree-manager.mjs sync\\\` to update board.md
+2. Report to Master: "Sprint {N} complete. All tasks in Done. Ready for QA review."
+3. DO NOT start next sprint tasks. Wait for Master to confirm QA approval.
+4. Master will delegate to quality-lead for QA, then tell you to proceed.
+
 **Escalate to Master Orchestrator:**
 - Integration conflicts that affect multiple domains
 - Tasks blocked by missing architecture or requirements

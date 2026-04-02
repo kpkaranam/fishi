@@ -230,43 +230,57 @@ feasibility.
 > after each milestone. Flag quality regressions immediately. Produce a quality
 > report at sprint completion."
 
-**Sprint cycle:**
-1. Dev-lead executes sprint, updating task board.
-2. Quality-lead validates continuously.
-3. On sprint completion, dev-lead reports to master.
-4. Master reviews sprint artifacts, checks quality report.
-5. If acceptable AND QA approval confirmed in \`.fishi/state/qa-results/sprint-{N}-full-review.json\` → proceed to next sprint or Phase 6. DO NOT advance without QA approval.
-6. If issues → send back to dev-lead with specific remediation instructions.
+**Sprint cycle — MANDATORY steps for EACH sprint (no exceptions):**
 
-## Sprint Merge & QA Flow
+<SPRINT_PROTOCOL>
+For EVERY sprint, you MUST follow these steps in exact order.
+You CANNOT skip step 4 (QA). You CANNOT start the next sprint before step 5.
 
-After each task merge:
-1. Dev Lead calls merge (which internally runs quick QA check)
-2. Quick check result (tests + lint + type check + secrets) determines if merge holds
-3. If quick check fails: Dev Lead has the agent fix in their worktree, re-merge
-4. If quick check passes: task is marked merged, file locks released, dependents unblocked
+**Step 1: EXECUTE** — Delegate to dev-lead for sprint N.
+  - Dev-lead assigns tasks to workers, manages worktrees
+  - Wait for dev-lead to report: "Sprint N tasks complete"
 
-After ALL sprint tasks are merged + quick-checked:
-5. Master requests full QA review from Quality Lead
-6. Quality Lead dispatches QA Agent (no worktree — validates base branch)
-7. QA Agent runs: code quality + OWASP Top 10 + CVE audit + compliance flags
-8. If APPROVED: proceed to sprint closure
-9. If ISSUES_FOUND: QA creates fix tasks, original agents fix, re-merge, re-QA
-10. Max 3 full QA cycles. If still failing, escalate to user.
+**Step 2: SYNC** — Run board sync to verify completion:
+  \\\`\\\`\\\`bash
+  node .fishi/scripts/worktree-manager.mjs sync
+  \\\`\\\`\\\`
+  Verify all sprint N tasks show in ## Done section of board.md.
 
-CRITICAL: DO NOT advance to next sprint without QA approval.
-The sprint-completion-guard hook enforces this automatically.
+**Step 3: QA REVIEW** — Delegate to quality-lead for QA review.
+  DO NOT SKIP THIS STEP. This is mandatory for EVERY sprint.
+  Dispatch quality-lead with this exact instruction:
+  > "Run full QA review for Sprint {N}. Dispatch qa-agent to validate the
+  > base branch. QA Agent must check: build, tests, code quality, OWASP
+  > Top 10, dependency CVEs, hardcoded secrets, compliance flags.
+  > Write results to .fishi/state/qa-results/sprint-{N}-full-review.json.
+  > Result must be APPROVED or ISSUES_FOUND."
+
+  Wait for quality-lead to report the QA result.
+
+**Step 4: QA GATE** — Check the QA result:
+  - If APPROVED: proceed to step 5
+  - If ISSUES_FOUND: quality-lead creates fix tasks, dev-lead fixes them,
+    then re-run QA (repeat step 3). Max 3 cycles, then escalate to user.
+  - If QA file does NOT exist: DO NOT PROCEED. Go back to step 3.
+
+**Step 5: ADVANCE** — Only after QA APPROVED:
+  - If more sprints remain → go to Step 1 for sprint N+1
+  - If all sprints complete → proceed to Phase 6 (QA & Security)
+
+CRITICAL: The sprint-completion-guard hook will BLOCK code-agent dispatches
+if a completed sprint has no QA approval. But YOU must also enforce this
+in your workflow — do NOT try to start the next sprint without running QA.
+</SPRINT_PROTOCOL>
 
 **Artifacts per sprint:**
-- Updated \`.fishi/taskboard.yaml\`
-- \`.fishi/plans/sprints/sprint-N-report.yaml\`
-- \`.fishi/plans/quality/sprint-N-quality.yaml\`
+- Updated \`.fishi/taskboard/board.md\`
+- \`.fishi/taskboard/sprints/sprint-N.md\` (marked COMPLETE)
+- \`.fishi/state/qa-results/sprint-N-full-review.json\` (QA approval)
 
-**Exit gate (per sprint):** All sprint tasks done or explicitly deferred. Tests
-pass. Quality report acceptable.
+**Exit gate (per sprint):** All sprint tasks in Done. QA APPROVED.
 
-**Exit gate (phase):** All sprints complete. Dev-lead confirms all tasks done
-or explicitly deferred. Code merged to integration branch.
+**Exit gate (phase):** All sprints complete AND all sprints have QA approval.
+Dev-lead confirms all tasks done or explicitly deferred.
 
 ---
 
