@@ -235,6 +235,57 @@ function syncBoardTask(taskId, targetColumn) {
   board = board.replace(/\\n{3,}/g, '\\n\\n');
 
   writeFileSync(boardPath, board, 'utf-8');
+
+  // Auto-update epic files — mark stories [x] when their tasks are all Done
+  syncEpicStories(taskId, board);
+}
+
+function syncEpicStories(taskId, boardContent) {
+  const epicsDir = join(ROOT, '.fishi', 'taskboard', 'epics');
+  if (!existsSync(epicsDir)) return;
+
+  const doneSection = boardContent.split(/^## Done/m)[1] || '';
+
+  try {
+    const epicFiles = readdirSync(epicsDir).filter(f => f.endsWith('.md'));
+    for (const ef of epicFiles) {
+      const epicPath = join(epicsDir, ef);
+      let epicContent = readFileSync(epicPath, 'utf-8');
+      let changed = false;
+
+      // Find unchecked stories in this epic
+      const storyPattern = /^(\\s*-\\s*)\\[ \\](\\s*STORY-\\d+:?\\s*.+)$/gm;
+      let match;
+      while ((match = storyPattern.exec(epicContent)) !== null) {
+        const storyLine = match[0];
+        const storyText = match[2];
+
+        // Extract task references from the story line or find related tasks
+        // Stories map to tasks — check if all TASK-NNN for this epic section are in Done
+        // Simple heuristic: if the story mentions an agent and ALL tasks for that agent
+        // in this sprint are Done, mark the story done
+        // Better heuristic: check if the story text keywords appear in Done tasks
+        const storyWords = storyText.toLowerCase().replace(/[^a-z0-9\\s]/g, ' ').split(/\\s+/).filter(w => w.length > 3);
+
+        // Check if at least 2 meaningful words from the story appear in Done tasks
+        const doneLines = doneSection.split('\\n').filter(l => l.includes('[x]'));
+        const matchingDoneLines = doneLines.filter(dl => {
+          const dlLower = dl.toLowerCase();
+          const matchCount = storyWords.filter(w => dlLower.includes(w)).length;
+          return matchCount >= 2;
+        });
+
+        if (matchingDoneLines.length > 0) {
+          epicContent = epicContent.replace(storyLine, match[1] + '[x]' + match[2]);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        writeFileSync(epicPath, epicContent, 'utf-8');
+      }
+    }
+  } catch {}
 }
 
 function detectCycle(tasks, newId, newDeps) {
